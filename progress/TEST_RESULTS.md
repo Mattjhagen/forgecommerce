@@ -32,3 +32,8 @@
 - GitHub authentication: BLOCKED; `gh auth status` reports the stored token is invalid.
 - Git checkpoint push: BLOCKED until GitHub authentication is repaired.
 - Local checkpoint commit: PASS, `4a7f434` on `autonomous/development`.
+## 2026-11-20 — Tenant blog CMS
+
+- `python3 -m unittest tests.test_commerce tests.test_payments tests.test_backup tests.test_security tests.test_runner -v` — 19 passed.
+- `python3 -m unittest tests.test_api tests.test_load -v` — 9 passed.
+- Coverage includes draft/publish authorization, tenant-scoped blog storage, escaped public content, public listing, and RSS-style feed output.

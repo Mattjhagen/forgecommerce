@@ -92,5 +92,7 @@ class CommerceTests(unittest.TestCase):
         domain=self.c.domain_add(self.aa,'shop.example.com'); self.assertEqual(domain['status'],'pending'); self.assertEqual(self.c.domain_verify(self.aa,domain['id'],domain['verification_token'])['status'],'verified')
         with self.assertRaises(DomainError): self.c.domain_verify(self.bb,domain['id'],domain['verification_token'])
         with self.assertRaises(DomainError): self.c.domain_add(self.aa,'not a hostname')
+    def test_blog_posts_publish_and_public_escape(self):
+        post=self.c.blog_create(self.aa,{'title':'News','excerpt':'Summary','content':'<script>x</script>'}); self.c.blog_publish(self.aa,post['id']); public=self.c.public_blog_post('alpha-store','news'); self.assertEqual(public['status'],'published'); self.assertIn('&lt;script&gt;',public['content']); self.assertIn('<item>',self.c.public_blog_feed('alpha-store'))
 
 if __name__=='__main__': unittest.main()

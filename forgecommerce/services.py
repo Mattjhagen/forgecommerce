@@ -253,6 +253,32 @@ class Commerce:
         if not row: raise DomainError("domain not found",404)
         if not token or not hmac.compare_digest(row["verification_hash"],api_key_hash(token)): raise DomainError("verification failed",400)
         verified=now(); self.db.execute("UPDATE domains SET status='verified',verified_at=? WHERE id=?",(verified,did)); self.audit(auth["tenant_id"],auth["id"],"domain.verified","domain",did); return {"id":did,"hostname":row["hostname"],"status":"verified","verified_at":verified}
+    def blog_posts(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,slug,title,excerpt,status,created_at,published_at FROM blog_posts WHERE tenant_id=? ORDER BY created_at DESC",(auth["tenant_id"],))]
+    def blog_create(self, auth, data):
+        if auth["role"] not in {"owner","admin","manager"}: raise DomainError("editor access required",403)
+        title=str(data.get("title","")).strip(); slug=slugify(str(data.get("slug") or title)); excerpt=str(data.get("excerpt","")).strip(); content=str(data.get("content","")).strip()
+        if not title or not content: raise DomainError("title and content required")
+        pid=new_id()
+        try: self.db.execute("INSERT INTO blog_posts VALUES (?,?,?,?,?,?,?,?,?)",(pid,auth["tenant_id"],slug,title[:200],excerpt[:500],content,"draft",now(),None))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("post slug already exists",409)
+            raise
+        self.audit(auth["tenant_id"],auth["id"],"blog.post.created","blog_post",pid); return dict(self.db.execute("SELECT * FROM blog_posts WHERE id=?",(pid,)).fetchone())
+    def blog_publish(self, auth, pid):
+        if auth["role"] not in {"owner","admin","manager"}: raise DomainError("editor access required",403)
+        published=now(); changed=self.db.execute("UPDATE blog_posts SET status='published',published_at=? WHERE id=? AND tenant_id=?",(published,pid,auth["tenant_id"]))
+        if changed.rowcount != 1: raise DomainError("post not found",404)
+        self.audit(auth["tenant_id"],auth["id"],"blog.post.published","blog_post",pid); return dict(self.db.execute("SELECT * FROM blog_posts WHERE id=?",(pid,)).fetchone())
+    def public_blog_post(self, slug, post_slug):
+        tenant=self.tenant(slug); row=self.db.execute("SELECT * FROM blog_posts WHERE tenant_id=? AND slug=? AND status='published'",(tenant["id"],post_slug)).fetchone()
+        if not row: raise DomainError("published post not found",404)
+        result=dict(row); result["title"]=html.escape(result["title"]); result["excerpt"]=html.escape(result["excerpt"]); result["content"]=html.escape(result["content"]); return result
+    def public_blog_feed(self, slug):
+        tenant=self.tenant(slug); rows=self.db.execute("SELECT slug,title,excerpt,published_at FROM blog_posts WHERE tenant_id=? AND status='published' ORDER BY published_at DESC LIMIT 50",(tenant["id"],))
+        entries=[]
+        for row in rows: entries.append(f"<item><title>{html.escape(row['title'])}</title><link>/store/{html.escape(slug)}/blog/{html.escape(row['slug'])}</link><description>{html.escape(row['excerpt'])}</description><pubDate>{html.escape(row['published_at'] or '')}</pubDate></item>")
+        return "<?xml version='1.0'?><rss version='2.0'><channel><title>"+html.escape(tenant["name"])+" blog</title>"+"".join(entries)+"</channel></rss>"
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)

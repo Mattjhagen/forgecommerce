@@ -96,6 +96,12 @@ Added locale-keyed page translations with tenant ownership checks, locale valida
 
 Next: add platform-wide administration controls, billing adapters, and deeper accessibility/load verification.
 
+## 2026-11-20 — Tenant blog CMS checkpoint
+
+Added tenant-scoped draft/publish blog posts, escaped public post rendering, a public blog listing, and RSS-style feed generation. The non-HTTP suite passes 19 tests and the HTTP/load suite passes 9 tests.
+
+Next: deepen accessibility checks, failure recovery, and production adapter documentation.
+
 ## 2026-11-20 — Sandbox billing checkpoint
 
 Added provider-neutral sandbox subscriptions with starter/growth/scale plan transitions, owner authorization, and quota updates. Full suite: 23 tests passing.
