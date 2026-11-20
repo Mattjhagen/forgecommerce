@@ -96,6 +96,12 @@ Added locale-keyed page translations with tenant ownership checks, locale valida
 
 Next: add platform-wide administration controls, billing adapters, and deeper accessibility/load verification.
 
+## 2026-11-20 — Sandbox billing checkpoint
+
+Added provider-neutral sandbox subscriptions with starter/growth/scale plan transitions, owner authorization, and quota updates. Full suite: 23 tests passing.
+
+Next: add platform-wide administration controls, payment adapter contract tests, and deeper accessibility/load verification.
+
 ## 2026-11-20 — Bulk catalog checkpoint
 
 Added validated tenant-scoped CSV product import and CSV export with audit logging. Full suite: 22 tests passing.

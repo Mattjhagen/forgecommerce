@@ -19,6 +19,7 @@
 - Current full suite: PASS (20 tests), including malicious SEO/heading escaping in published HTML.
 - Current full suite: PASS (21 tests), including multilingual page locale override and fallback.
 - Current full suite: PASS (22 tests), including tenant-scoped CSV product import/export.
+- Current full suite: PASS (23 tests), including sandbox subscription transitions and quota updates.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.

@@ -23,6 +23,7 @@ class Commerce:
             self.db.execute("INSERT INTO tenants VALUES (?,?,?,?)", (tenant_id, store_name.strip()[:100], slugify(store_name), now()))
             self.db.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (user_id, tenant_id, email, password_hash, "owner", now()))
             self.db.execute("INSERT INTO tenant_limits (tenant_id) VALUES (?)", (tenant_id,))
+            timestamp=now(); self.db.execute("INSERT INTO subscriptions VALUES (?,?,?,?,?,?,?,?)",(new_id(),tenant_id,"starter","active","sandbox","sub_"+new_id(),timestamp,timestamp))
             self.db.execute("COMMIT")
         except Exception:
             self.db.execute("ROLLBACK")
@@ -217,6 +218,19 @@ class Commerce:
         if auth["role"] != "owner": raise DomainError("owner access required",403)
         limits=self.db.execute("SELECT plan,product_limit,page_limit,staff_limit FROM tenant_limits WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
         return {"plan":limits["plan"],"limits":dict(limits),"usage":{"products":self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"pages":self.db.execute("SELECT COUNT(*) FROM pages WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"staff":self.db.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role!='owner'",(auth["tenant_id"],)).fetchone()[0]}}
+    def subscription(self, auth):
+        row=self.db.execute("SELECT id,plan,status,provider,provider_reference,created_at,updated_at FROM subscriptions WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
+        if not row: raise DomainError("subscription not found",404)
+        return dict(row)
+    def subscription_change(self, auth, plan, action="activate"):
+        if auth["role"] != "owner": raise DomainError("owner access required",403)
+        plans={"starter":(100,20,5),"growth":(1000,100,20),"scale":(10000,1000,100)}
+        if plan not in plans: raise DomainError("unknown subscription plan")
+        status="cancelled" if action=="cancel" else "active"; timestamp=now(); limits=plans[plan]
+        self.db.execute("UPDATE subscriptions SET plan=?,status=?,updated_at=? WHERE tenant_id=?",(plan,status,timestamp,auth["tenant_id"]))
+        self.db.execute("UPDATE tenant_limits SET plan=?,product_limit=?,page_limit=?,staff_limit=? WHERE tenant_id=?",(plan,*limits,auth["tenant_id"]))
+        self.audit(auth["tenant_id"],auth["id"],"subscription.updated","subscription",None,{"plan":plan,"status":status})
+        return self.subscription(auth)
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)

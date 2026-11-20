@@ -73,5 +73,10 @@ class CommerceTests(unittest.TestCase):
         deliveries=self.c.webhook_deliveries(self.aa,hook['id']); self.assertEqual(deliveries[0]['event_type'],'order.created'); self.assertEqual(deliveries[0]['signature'],hmac.new(hook['secret'].encode(),deliveries[0]['payload_json'].encode(),hashlib.sha256).hexdigest()); self.assertEqual(json.loads(deliveries[0]['payload_json'])['id'],order['id'])
         self.c.api_key_revoke(self.aa,key['id'])
         with self.assertRaises(DomainError): self.c.authenticate_api_key(key['key'])
+    def test_sandbox_subscription_changes_update_limits(self):
+        self.assertEqual(self.c.subscription(self.aa)['plan'],'starter')
+        self.assertEqual(self.c.subscription_change(self.aa,'growth')['status'],'active'); self.assertEqual(self.c.usage(self.aa)['limits']['product_limit'],1000)
+        staff=self.c.staff_create(self.aa,{'email':'billing-staff@example.com','password':'staff password','role':'manager'}); staff_auth=self.c.authenticate(self.c.login('billing-staff@example.com','staff password')['token'])
+        with self.assertRaises(DomainError): self.c.subscription_change(staff_auth,'scale')
 
 if __name__=='__main__': unittest.main()
