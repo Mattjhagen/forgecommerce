@@ -102,6 +102,12 @@ Added provider-neutral sandbox subscriptions with starter/growth/scale plan tran
 
 Next: add platform-wide administration controls, payment adapter contract tests, and deeper accessibility/load verification.
 
+## 2026-11-20 — Payment adapter checkpoint
+
+Added a provider-neutral sandbox payment adapter with idempotent charge/refund behavior and integrated it into checkout. Full suite: 24 tests passing.
+
+Next: add platform-wide administration controls and deeper accessibility/load verification.
+
 ## 2026-11-20 — Bulk catalog checkpoint
 
 Added validated tenant-scoped CSV product import and CSV export with audit logging. Full suite: 22 tests passing.

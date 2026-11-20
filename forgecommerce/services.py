@@ -1,6 +1,7 @@
 import csv, hashlib, hmac, html, io, json, re
 from datetime import datetime, timedelta, timezone
 from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
+from .payments import PaymentError, SandboxPaymentProvider
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def slugify(value): return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "store"
@@ -9,7 +10,7 @@ class DomainError(Exception):
     def __init__(self, message, status=400): self.message, self.status = message, status
 
 class Commerce:
-    def __init__(self, conn, session_hours=24): self.db, self.session_hours = conn, session_hours
+    def __init__(self, conn, session_hours=24, payment_provider=None): self.db, self.session_hours, self.payment_provider = conn, session_hours, payment_provider or SandboxPaymentProvider()
     def audit(self, tenant, user, action, resource_type=None, resource_id=None, metadata=None):
         self.db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?,?,?)", (new_id(), tenant, user, action, resource_type, resource_id, json.dumps(metadata or {}, sort_keys=True), now()))
     def register(self, email, password, store_name):
@@ -177,6 +178,7 @@ class Commerce:
         oid = new_id()
         try:
             self.db.execute("BEGIN")
+            payment=self.payment_provider.charge(key,cart["total_cents"])
             for item in cart["items"]:
                 changed = self.db.execute("UPDATE products SET inventory=inventory-? WHERE id=? AND tenant_id=? AND inventory>=?", (item["quantity"],item["product_id"],auth["tenant_id"],item["quantity"]))
                 if changed.rowcount != 1: raise DomainError("inventory changed; retry checkout",409)
@@ -185,10 +187,10 @@ class Commerce:
                 self.db.execute("UPDATE customers SET order_count=order_count+1,total_spend_cents=total_spend_cents+?,updated_at=? WHERE id=?",(cart["total_cents"],timestamp,customer["id"]))
             else:
                 self.db.execute("INSERT INTO customers VALUES (?,?,?,?,?,?,?,?)",(new_id(),auth["tenant_id"],email,None,1,cart["total_cents"],timestamp,timestamp))
-            self.db.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)", (oid,auth["tenant_id"],cid,email,cart["total_cents"],"paid_sandbox","unfulfilled",key,now()))
+            self.db.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)", (oid,auth["tenant_id"],cid,email,cart["total_cents"],payment.status,"unfulfilled",key,now()))
             for item in cart["items"]: self.db.execute("INSERT INTO order_items VALUES (?,?,?,?,?)", (oid,item["product_id"],item["name"],item["quantity"],item["unit_price_cents"]))
             self.db.execute("UPDATE carts SET status='converted',customer_email=? WHERE id=?",(email,cid)); self.db.execute("COMMIT")
-        except DomainError: self.db.execute("ROLLBACK"); raise
+        except (DomainError,PaymentError) as exc: self.db.execute("ROLLBACK"); raise DomainError(str(exc),409)
         except Exception: self.db.execute("ROLLBACK"); raise DomainError("checkout could not be completed",409)
         self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":cart["total_cents"]})
         self.emit_webhook(auth["tenant_id"],"order.created",{"id":oid,"total_cents":cart["total_cents"],"customer_email":email})

@@ -20,6 +20,7 @@
 - Current full suite: PASS (21 tests), including multilingual page locale override and fallback.
 - Current full suite: PASS (22 tests), including tenant-scoped CSV product import/export.
 - Current full suite: PASS (23 tests), including sandbox subscription transitions and quota updates.
+- Current full suite: PASS (24 tests), including payment-provider idempotency/refund contract behavior.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
