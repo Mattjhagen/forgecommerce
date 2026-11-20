@@ -151,3 +151,41 @@ class Commerce:
         return {"name": name[:100], "enabled": enabled}
     def audit_events(self, auth):
         return [dict(row) for row in self.db.execute("SELECT action,resource_type,resource_id,metadata_json,created_at FROM audit_events WHERE tenant_id=? ORDER BY created_at DESC LIMIT 200", (auth["tenant_id"],))]
+    def tenant(self, slug):
+        row = self.db.execute("SELECT id,name,slug FROM tenants WHERE slug=?", (slug,)).fetchone()
+        if not row: raise DomainError("store not found", 404)
+        return row
+    def public_products(self, slug):
+        tenant = self.tenant(slug)
+        return [dict(row) for row in self.db.execute("SELECT id,name,slug,price_cents,inventory FROM products WHERE tenant_id=? AND status='active' ORDER BY created_at", (tenant["id"],))]
+    def public_page(self, slug, page_slug):
+        tenant = self.tenant(slug)
+        page = self.db.execute("SELECT * FROM pages WHERE tenant_id=? AND slug=? AND status='published'", (tenant["id"], page_slug)).fetchone()
+        if not page: raise DomainError("published page not found", 404)
+        version = self.db.execute("SELECT * FROM page_versions WHERE page_id=? AND version=?", (page["id"], page["published_version"])).fetchone()
+        result = dict(page); result["content_json"] = version["content_json"]; result["seo_json"] = version["seo_json"]; return result
+    def public_cart_create(self, slug):
+        tenant = self.tenant(slug); cid = new_id(); self.db.execute("INSERT INTO carts VALUES (?,?,?,?,?)", (cid, tenant["id"], None, "open", now())); return {"id": cid, "store": slug, "items": [], "total_cents": 0}
+    def public_cart_add(self, slug, cid, pid, quantity):
+        tenant = self.tenant(slug); auth = {"tenant_id": tenant["id"]}; return self.cart_add(auth, cid, pid, quantity)
+    def public_cart(self, slug, cid):
+        tenant = self.tenant(slug); return self.cart({"tenant_id": tenant["id"]}, cid)
+    def public_checkout(self, slug, cid, email, key):
+        tenant = self.tenant(slug); owner = self.db.execute("SELECT id FROM users WHERE tenant_id=? AND role='owner' ORDER BY created_at LIMIT 1", (tenant["id"],)).fetchone()
+        return self.checkout({"tenant_id": tenant["id"], "id": owner["id"] if owner else None}, cid, email, key)
+    def staff_list(self, auth):
+        if auth["role"] != "owner": raise DomainError("owner access required", 403)
+        return [dict(row) for row in self.db.execute("SELECT id,email,role,created_at FROM users WHERE tenant_id=? ORDER BY created_at", (auth["tenant_id"],))]
+    def staff_create(self, auth, data):
+        if auth["role"] != "owner": raise DomainError("owner access required", 403)
+        email = str(data.get("email", "")).strip().lower(); role = data.get("role", "manager")
+        if role not in {"admin", "manager", "support", "fulfillment"} or "@" not in email: raise DomainError("valid email and staff role required")
+        try: password = hash_password(str(data.get("password", "")))
+        except ValueError as exc: raise DomainError(str(exc))
+        uid = new_id()
+        try: self.db.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (uid, auth["tenant_id"], email, password, role, now()))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("email already exists", 409)
+            raise
+        self.audit(auth["tenant_id"], auth["id"], "staff.created", "user", uid, {"role": role})
+        return dict(self.db.execute("SELECT id,email,role,created_at FROM users WHERE id=?", (uid,)).fetchone())

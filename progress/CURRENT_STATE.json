@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-19T21:40:00-06:00",
-  "phase": "foundation-commerce",
-  "checkpoint": "thread-safe-http-commerce-api",
+  "updated_at": "2026-11-19T21:55:00-06:00",
+  "phase": "foundation-commerce-storefront",
+  "checkpoint": "public-guest-checkout-staff-roles",
   "status": "in_progress",
-  "next_action": "Implement staff roles, customer/order operations, and the first public storefront page routes",
-  "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "order-refund", "thread-safe-http-api"],
+  "next_action": "Implement customer records/order search and the visual editor shell with responsive preview",
+  "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "guest-storefront-checkout", "order-refund", "staff-role-authorization", "thread-safe-http-api"],
   "known_blockers": ["GitHub CLI token invalid", "Production PostgreSQL, TLS, hosted payments, and external email are not configured for local staging"],
   "last_test_command": "python3 -m unittest discover -s tests -v",
   "last_successful_checkpoint": "9b129c4"

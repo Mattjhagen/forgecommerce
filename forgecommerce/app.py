@@ -19,6 +19,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path=urlparse(self.path).path
             if path=="/health": return self.send_json(200,{"status":"ok","service":"forgecommerce"})
+            parts=path.strip("/").split("/")
+            if len(parts)==3 and parts[0]=="store" and parts[2]=="products": return self.send_json(200,{"products":self.server.commerce.public_products(parts[1])})
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="pages": return self.send_json(200,self.server.commerce.public_page(parts[1],parts[3]))
             auth=self.auth()
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
             if path.startswith("/api/products/"): return self.send_json(200,self.server.commerce.product(auth,path.rsplit("/",1)[1]))
@@ -28,6 +31,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/pages/"): return self.send_json(200,self.server.commerce.page(auth,path.rsplit("/",1)[1]))
             if path=="/api/feature-flags": return self.send_json(200,{"flags":self.server.commerce.flags(auth)})
             if path=="/api/audit-events": return self.send_json(200,{"events":self.server.commerce.audit_events(auth)})
+            if path=="/api/staff": return self.send_json(200,{"staff":self.server.commerce.staff_list(auth)})
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})
@@ -36,6 +40,10 @@ class Handler(BaseHTTPRequestHandler):
             path=urlparse(self.path).path; data=self.body(); c=self.server.commerce
             if path=="/api/auth/register": return self.send_json(201,c.register(data.get("email",""),data.get("password",""),data.get("store_name","")))
             if path=="/api/auth/login": return self.send_json(200,c.login(data.get("email",""),data.get("password","")))
+            parts=path.strip("/").split("/")
+            if len(parts)==3 and parts[0]=="store" and parts[2]=="carts": return self.send_json(201,c.public_cart_create(parts[1]))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="checkout": return self.send_json(201,c.public_checkout(parts[1],data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="items": return self.send_json(200,c.public_cart_add(parts[1],data.get("cart_id"),data.get("product_id"),data.get("quantity")))
             auth=self.auth()
             if path=="/api/products": return self.send_json(201,c.product_create(auth,data))
             if path.startswith("/api/products/") and path.endswith("/inventory"):
@@ -52,6 +60,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/orders/") and path.endswith("/refund"):
                 return self.send_json(200,c.refund(auth,path.split("/")[3]))
             if path=="/api/feature-flags": return self.send_json(200,c.flag_set(auth,data.get("name"),data.get("enabled")))
+            if path=="/api/staff": return self.send_json(201,c.staff_create(auth,data))
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})

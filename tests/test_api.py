@@ -26,5 +26,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.call('GET','/api/orders',token=auth['token'])[1]['orders'][0]['id'],order['id'])
     def test_health_is_public(self):
         self.assertEqual(self.call('GET','/health')[1]['status'],'ok')
+    def test_guest_storefront_browse_cart_and_checkout(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'merchant@example.com','password':'long enough password','store_name':'Guest Shop'})
+        _, product=self.call('POST','/api/products',{'name':'Hat','price_cents':1800,'inventory':1},auth['token'])
+        _, listing=self.call('GET','/store/guest-shop/products')
+        self.assertEqual(listing['products'][0]['id'],product['id'])
+        _, cart=self.call('POST','/store/guest-shop/carts')
+        self.call('POST','/store/guest-shop/carts/items',{'cart_id':cart['id'],'product_id':product['id'],'quantity':1})
+        _, order=self.call('POST','/store/guest-shop/carts/checkout',{'cart_id':cart['id'],'customer_email':'guest@example.com'},headers={'Idempotency-Key':'guest-1'})
+        self.assertEqual(order['payment_status'],'paid_sandbox')
 
 if __name__=='__main__': unittest.main()

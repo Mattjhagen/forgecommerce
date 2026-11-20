@@ -32,5 +32,10 @@ class CommerceTests(unittest.TestCase):
         with self.assertRaises(DomainError): self.c.login('owner-a@example.com','wrong password')
         cart=self.c.cart_create(self.aa)
         with self.assertRaises(DomainError): self.c.cart(self.bb,cart['id'])
+    def test_owner_can_manage_staff_but_staff_cannot(self):
+        staff=self.c.staff_create(self.aa,{'email':'manager@alpha.example','password':'manager password','role':'manager'})
+        self.assertEqual(staff['role'],'manager'); self.assertEqual(len(self.c.staff_list(self.aa)),2)
+        staff_auth=self.c.authenticate(self.c.login('manager@alpha.example','manager password')['token'])
+        with self.assertRaises(DomainError): self.c.staff_list(staff_auth)
 
 if __name__=='__main__': unittest.main()
