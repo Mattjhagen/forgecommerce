@@ -11,4 +11,6 @@ Set `FORGECOMMERCE_DB` to choose a database path and `FORGECOMMERCE_PORT` to cho
 
 Set `FORGECOMMERCE_PLATFORM_ADMIN_TOKEN` only in the service environment to enable platform-admin tenant operations. Use `X-Platform-Admin` for `/api/platform/tenants`; never place this token in source control or client-side code.
 
+Migration status is available at `/api/platform/migrations`; applying migrations is an authenticated platform-admin operation. The local schema records an explicit version in `schema_meta`.
+
 The supervisor is `scripts/forgecommerce-supervisor.py`; it uses a lock file, bounded restart attempts, and graceful SIGTERM handling. It is a local design and is not installed as a system service automatically.

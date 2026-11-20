@@ -40,6 +40,7 @@ class Handler(BaseHTTPRequestHandler):
             path=urlparse(self.path).path
             if path=="/health": return self.send_json(200,{"status":"ok","service":"forgecommerce"})
             if path=="/api/platform/tenants": return self.send_json(200,{"tenants":self.server.commerce.platform_tenants(self.headers.get("X-Platform-Admin",""))})
+            if path=="/api/platform/migrations": return self.send_json(200,self.server.commerce.platform_migrations(self.headers.get("X-Platform-Admin","")))
             parts=path.strip("/").split("/")
             if len(parts)==2 and parts[0]=="store": return self.send_html(200,self.storefront_html(parts[1]))
             if path=="/editor": return self.send_html(200,self.editor_html())
@@ -81,6 +82,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/auth/register": return self.send_json(201,c.register(data.get("email",""),data.get("password",""),data.get("store_name","")))
             if path=="/api/auth/login": return self.send_json(200,c.login(data.get("email",""),data.get("password","")))
             if path=="/api/platform/tenants": return self.send_json(201,c.platform_provision(self.headers.get("X-Platform-Admin",""),data))
+            if path=="/api/platform/migrations": return self.send_json(200,c.platform_migrations(self.headers.get("X-Platform-Admin",""),True))
             if path.startswith("/api/platform/tenants/") and path.endswith("/status"):
                 return self.send_json(200,c.platform_set_status(self.headers.get("X-Platform-Admin",""),path.split("/")[3],data.get("status")))
             parts=path.strip("/").split("/")

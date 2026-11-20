@@ -108,6 +108,12 @@ Added a separately authenticated platform-admin boundary for tenant provisioning
 
 Next: add migration controls and deeper accessibility/load verification.
 
+## 2026-11-20 — Migration and load checkpoint
+
+Added explicit schema version metadata and platform-admin migration status/apply controls. Added a 32-request concurrent localhost health smoke test. Full suite: 26 tests passing.
+
+Next: deepen accessibility checks, failure recovery, and production adapter documentation.
+
 ## 2026-11-20 — Payment adapter checkpoint
 
 Added a provider-neutral sandbox payment adapter with idempotent charge/refund behavior and integrated it into checkout. Full suite: 24 tests passing.

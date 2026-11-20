@@ -9,7 +9,7 @@ Statuses: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `IMPLEMENTED`, `VERIFIED`. On
 | Commerce | Products, variants, inventory, carts, sandbox checkout, orders | IN_PROGRESS | `tests/test_commerce.py`, `tests/test_api.py`, `tests/test_payments.py` (sandbox provider contract verified; live provider remains) |
 | Operations | Analytics, customers, imports, staff roles, billing | IN_PROGRESS | CSV import/export, analytics/customers/order search/staff roles, and sandbox subscriptions verified; live billing remains |
 | Advanced | REST API, webhooks, domains, SEO, CMS, i18n, search | IN_PROGRESS | API keys, signed webhooks, public search, sitemap, published-page SEO, and locale fallback verified in tests; domains/CMS remain |
-| Administration | Super-admin, quotas, health, backups, migration controls | IN_PROGRESS | Platform-admin tenant provisioning/listing/suspension, `/api/admin/health`, `/api/admin/usage`, and backup/restore verified; migration controls remain |
+| Administration | Super-admin, quotas, health, backups, migration controls | IN_PROGRESS | Platform-admin tenant provisioning/listing/suspension, `/api/platform/migrations`, `/api/admin/health`, `/api/admin/usage`, and backup/restore verified |
 | Security | Isolation, authz, validation, rate limits, XSS/CSRF, idempotency | IN_PROGRESS | `tests/test_commerce.py` (isolation, auth, validation, idempotency) |
 
 The matrix is intentionally conservative while the first foundation checkpoint is being built.

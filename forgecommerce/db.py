@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (id TEXT PRIMARY KEY, tenant_id TEXT NO
 CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, key_hash TEXT NOT NULL UNIQUE, prefix TEXT NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT);
 CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, url TEXT NOT NULL, secret TEXT NOT NULL, events_json TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS webhook_deliveries (id TEXT PRIMARY KEY, webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE, event_type TEXT NOT NULL, payload_json TEXT NOT NULL, signature TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS pages (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, slug TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', published_version INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(tenant_id, slug));
 CREATE TABLE IF NOT EXISTS page_versions (page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE, version INTEGER NOT NULL, content_json TEXT NOT NULL, seo_json TEXT NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(page_id, version));
 CREATE TABLE IF NOT EXISTS page_translations (page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE, locale TEXT NOT NULL, content_json TEXT NOT NULL, seo_json TEXT NOT NULL, created_by TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(page_id, locale));
@@ -40,4 +41,5 @@ def connect(path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
+    conn.execute("INSERT OR IGNORE INTO schema_meta(key,value) VALUES ('schema_version','1')")
     return conn

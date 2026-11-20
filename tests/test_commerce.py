@@ -86,6 +86,7 @@ class CommerceTests(unittest.TestCase):
         with self.assertRaises(DomainError): platform.platform_tenants('wrong')
         tenant=platform.tenant('platform-shop'); user=platform.login('platform@example.com','long enough password'); self.assertEqual(platform.platform_set_status('platform-secret','platform-shop','suspended')['status'],'suspended')
         with self.assertRaises(DomainError): platform.authenticate(user['token'])
+        self.assertEqual(platform.platform_migrations('platform-secret')['pending'],0); self.assertEqual(platform.platform_migrations('platform-secret',True)['current'],1)
         db.close()
 
 if __name__=='__main__': unittest.main()

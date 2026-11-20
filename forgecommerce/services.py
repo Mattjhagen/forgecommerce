@@ -2,6 +2,7 @@ import csv, hashlib, hmac, html, io, json, os, re
 from datetime import datetime, timedelta, timezone
 from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
 from .payments import PaymentError, SandboxPaymentProvider
+from .migrations import apply as apply_migrations, status as migration_status
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def slugify(value): return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "store"
@@ -311,6 +312,9 @@ class Commerce:
         if not row: raise DomainError("tenant not found",404)
         self.db.execute("UPDATE tenant_controls SET status=?,updated_at=? WHERE tenant_id=?",(status,now(),row["id"]))
         return {"slug":slug,"status":status}
+    def platform_migrations(self, token, apply=False):
+        self.platform_auth(token)
+        return apply_migrations(self.db) if apply else migration_status(self.db)
     def public_products(self, slug):
         tenant = self.tenant(slug)
         return [dict(row) for row in self.db.execute("SELECT id,name,slug,price_cents,inventory FROM products WHERE tenant_id=? AND status='active' ORDER BY created_at", (tenant["id"],))]
