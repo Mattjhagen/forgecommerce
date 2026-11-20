@@ -1,0 +1,11 @@
+[Unit]
+Description=Push verified ForgeCommerce commits every 30 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=forgecommerce-sync.service
+
+[Install]
+WantedBy=timers.target

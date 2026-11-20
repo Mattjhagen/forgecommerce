@@ -1,0 +1,8 @@
+[Unit]
+Description=Synchronize verified ForgeCommerce checkpoints to GitHub
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/matt/projects/forgecommerce
+ExecStart=/home/matt/projects/forgecommerce/scripts/checkpoint-sync.sh

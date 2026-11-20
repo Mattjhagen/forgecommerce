@@ -1,0 +1,11 @@
+[Unit]
+Description=Recover ForgeCommerce Codex runner every 30 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=forgecommerce-agent.service
+
+[Install]
+WantedBy=timers.target

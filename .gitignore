@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.sqlite3
+*.sqlite3-*
+.env
+.env.*
+!.env.example
+.forgecommerce-*.lock
+progress/runtime/*
+!progress/runtime/.gitkeep
+progress/runtime/logs/
+.codex-run/

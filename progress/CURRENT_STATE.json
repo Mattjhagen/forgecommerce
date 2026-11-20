@@ -1,0 +1,10 @@
+{
+  "updated_at": "2026-11-19T21:17:00-06:00",
+  "phase": "foundation",
+  "checkpoint": "supervised-runner-infrastructure",
+  "status": "in_progress",
+  "next_action": "Repair GitHub authentication, create the first checkpoint commit, then verify remote confirmation",
+  "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator"],
+  "known_blockers": ["GitHub CLI token invalid", "Production PostgreSQL, TLS, hosted payments, and external email are not configured for local staging"],
+  "last_test_command": "python3 -m unittest discover -s tests -v"
+}

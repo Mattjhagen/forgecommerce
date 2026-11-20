@@ -1,0 +1,13 @@
+[Unit]
+Description=ForgeCommerce supervised Codex development runner
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/matt/projects/forgecommerce
+ExecStart=/home/matt/projects/forgecommerce/scripts/recover-agent.sh
+ExecStop=/home/matt/projects/forgecommerce/scripts/stop-agent.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=default.target
