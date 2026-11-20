@@ -95,3 +95,9 @@ Next: add multilingual content primitives and platform-wide administration contr
 Added locale-keyed page translations with tenant ownership checks, locale validation, public locale overrides, and default-language fallback. Full suite: 21 tests passing.
 
 Next: add platform-wide administration controls, billing adapters, and deeper accessibility/load verification.
+
+## 2026-11-20 — Bulk catalog checkpoint
+
+Added validated tenant-scoped CSV product import and CSV export with audit logging. Full suite: 22 tests passing.
+
+Next: add platform-wide administration controls, billing adapters, and deeper accessibility/load verification.

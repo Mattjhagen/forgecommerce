@@ -14,6 +14,8 @@ class Handler(BaseHTTPRequestHandler):
         raw=value.encode(); self.send_response(status); self.send_header("Content-Type","text/html; charset=utf-8"); self.send_header("Content-Length",str(len(raw))); self.send_header("Content-Security-Policy","default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"); self.send_header("X-Content-Type-Options","nosniff"); self.end_headers(); self.wfile.write(raw)
     def send_xml(self, status, value):
         raw=value.encode(); self.send_response(status); self.send_header("Content-Type","application/xml; charset=utf-8"); self.send_header("Content-Length",str(len(raw))); self.send_header("X-Content-Type-Options","nosniff"); self.end_headers(); self.wfile.write(raw)
+    def send_csv(self, status, value):
+        raw=value.encode(); self.send_response(status); self.send_header("Content-Type","text/csv; charset=utf-8"); self.send_header("Content-Length",str(len(raw))); self.send_header("Content-Disposition","attachment; filename=products.csv"); self.send_header("X-Content-Type-Options","nosniff"); self.end_headers(); self.wfile.write(raw)
     def storefront_html(self, slug):
         store=self.server.commerce.tenant(slug)
         return """<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>%s</title><style>body{font:16px system-ui;margin:0;color:#172033;background:#f6f7fb}header{padding:28px 7vw;background:#172033;color:white}main{padding:32px 7vw;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;box-shadow:0 5px 18px #17203312}.price{font-weight:700;font-size:1.2rem}button{background:#3457d5;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}</style></head><body><header><small>ForgeCommerce storefront</small><h1>%s</h1></header><main id='products'><p>Loading products…</p></main><script>const slug=%s;const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));fetch('/store/'+slug+'/products').then(r=>r.json()).then(({products})=>{document.querySelector('#products').innerHTML=products.map(p=>`<article class="card"><h2>${esc(p.name)}</h2><p class="price">$${(p.price_cents/100).toFixed(2)}</p><p>${Number(p.inventory)} available</p><button onclick="add('${encodeURIComponent(p.id)}')">Add to cart</button></article>`).join('')});let cart=null;async function add(id){id=decodeURIComponent(id);if(!cart)cart=await (await fetch('/store/'+slug+'/carts',{method:'POST'})).json();await fetch('/store/'+slug+'/carts/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cart_id:cart.id,product_id:id,quantity:1})});alert('Added to cart');}</script></body></html>""" % (html.escape(store["name"]), html.escape(store["name"]), json.dumps(slug))
@@ -47,6 +49,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="page": return self.send_html(200,self.public_page_html(parts[1],parts[3],parse_qs(urlparse(self.path).query).get("lang",[None])[0]))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="collections": return self.send_json(200,self.server.commerce.public_collection(parts[1],parts[3]))
             auth=self.auth()
+            if path=="/api/products/export.csv": return self.send_csv(200,self.server.commerce.products_csv(auth))
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
             if path.startswith("/api/products/") and path.endswith("/variants"):
                 return self.send_json(200,{"variants":self.server.commerce.variants(auth,path.split("/")[3])})
@@ -80,6 +83,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="checkout": return self.send_json(201,c.public_checkout(parts[1],data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="items": return self.send_json(200,c.public_cart_add(parts[1],data.get("cart_id"),data.get("product_id"),data.get("quantity")))
             auth=self.auth()
+            if path=="/api/products/import": return self.send_json(200,c.products_import(auth,data.get("csv","")))
             if path=="/api/products": return self.send_json(201,c.product_create(auth,data))
             if path=="/api/collections": return self.send_json(201,c.collection_create(auth,data))
             if path.startswith("/api/collections/") and path.endswith("/products"):

@@ -1,4 +1,4 @@
-import hashlib, hmac, html, json, re
+import csv, hashlib, hmac, html, io, json, re
 from datetime import datetime, timedelta, timezone
 from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
 
@@ -90,6 +90,20 @@ class Commerce:
         self.audit(auth["tenant_id"], auth["id"], "product.created", "product", pid, {"name": name})
         return self.product(auth, pid)
     def products(self, auth): return [dict(r) for r in self.db.execute("SELECT id,name,slug,price_cents,inventory,status,created_at FROM products WHERE tenant_id=? ORDER BY created_at", (auth["tenant_id"],))]
+    def products_csv(self, auth):
+        output=io.StringIO(); writer=csv.writer(output); writer.writerow(["id","name","slug","price_cents","inventory","status"])
+        for product in self.products(auth): writer.writerow([product[k] for k in ("id","name","slug","price_cents","inventory","status")])
+        return output.getvalue()
+    def products_import(self, auth, content):
+        rows=csv.DictReader(io.StringIO(str(content))); required={"name","price_cents","inventory"}
+        if not rows.fieldnames or not required.issubset(set(rows.fieldnames)): raise DomainError("CSV requires name, price_cents, inventory columns")
+        imported=[]
+        for number,row in enumerate(rows,start=2):
+            try: data={"name":row["name"],"price_cents":int(row["price_cents"]),"inventory":int(row["inventory"])}
+            except (ValueError,TypeError): raise DomainError(f"invalid product row {number}")
+            imported.append(self.product_create(auth,data))
+        self.audit(auth["tenant_id"],auth["id"],"products.imported","product",None,{"count":len(imported)})
+        return {"imported":len(imported),"products":imported}
     def product(self, auth, pid):
         row = self.db.execute("SELECT id,name,slug,price_cents,inventory,status,created_at FROM products WHERE tenant_id=? AND id=?", (auth["tenant_id"], pid)).fetchone()
         if not row: raise DomainError("product not found", 404)

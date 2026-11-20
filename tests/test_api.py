@@ -69,5 +69,10 @@ class ApiTests(unittest.TestCase):
         with urlopen(req) as response: self.assertIn('Bienvenue',response.read().decode())
         req=Request(self.base+'/store/locale-shop/page/welcome?lang=de',method='GET')
         with urlopen(req) as response: self.assertIn('Welcome',response.read().decode())
+    def test_product_csv_import_and_export_are_tenant_scoped(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'csv@example.com','password':'long enough password','store_name':'CSV Shop'})
+        imported=self.call('POST','/api/products/import',{'csv':'name,price_cents,inventory\nImported Mug,1200,4\n'},auth['token'])[1]; self.assertEqual(imported['imported'],1)
+        req=Request(self.base+'/api/products/export.csv',method='GET',headers={'Authorization':'Bearer '+auth['token']})
+        with urlopen(req) as response: csv_text=response.read().decode(); self.assertIn('Imported Mug',csv_text); self.assertIn('price_cents',csv_text)
 
 if __name__=='__main__': unittest.main()
