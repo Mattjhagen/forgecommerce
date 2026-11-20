@@ -55,5 +55,10 @@ class ApiTests(unittest.TestCase):
         self.call('POST',f"/api/pages/{page['id']}/publish",{},auth['token'])
         req=Request(self.base+'/store/page-seo/page/about',method='GET')
         with urlopen(req) as response: body=response.read().decode(); self.assertIn('<title>About Page</title>',body); self.assertIn('About us',body); self.assertIn('A safe description',body)
+        _, unsafe=self.call('POST','/api/pages',{'title':'Safe','content':{'sections':[{'heading':'<script>alert(1)</script>'}]},'seo':{'title':'<script>x</script>','description':'"><script>x</script>'}},auth['token'])
+        self.call('POST',f"/api/pages/{unsafe['id']}/publish",{},auth['token'])
+        req=Request(self.base+'/store/page-seo/page/safe',method='GET')
+        with urlopen(req) as response:
+            body=response.read().decode(); self.assertNotIn('<title><script>',body); self.assertIn('&lt;script&gt;x&lt;/script&gt;',body)
 
 if __name__=='__main__': unittest.main()

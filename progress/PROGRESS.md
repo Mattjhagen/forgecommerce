@@ -83,3 +83,9 @@ Next: add page SEO rendering, malicious-content regression coverage, and platfor
 Added safe public HTML rendering for published pages with escaped SEO title/description and section headings. Full suite: 20 tests passing.
 
 Next: add malicious-content regression coverage, multilingual content primitives, and platform-wide administration controls.
+
+## 2026-11-20 — Malicious-content regression checkpoint
+
+Added an end-to-end regression proving malicious SEO metadata and section headings are escaped in published HTML. Full suite: 20 tests passing.
+
+Next: add multilingual content primitives and platform-wide administration controls.
