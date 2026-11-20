@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-11-19T22:25:00-06:00",
-  "phase": "merchant-operations",
-  "checkpoint": "customer-order-operations",
+  "updated_at": "2026-11-19T22:40:00-06:00",
+  "phase": "commerce-catalog",
+  "checkpoint": "tenant-scoped-variants",
   "status": "in_progress",
-  "next_action": "Implement product variants/collections, editor rollback controls, and backup/restore verification",
+  "next_action": "Implement collections, editor rollback controls, and backup/restore verification",
   "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "guest-storefront-checkout", "order-refund", "staff-role-authorization", "customer-records", "order-search-status", "thread-safe-http-api", "storefront-html", "editor-html-shell"],
   "known_blockers": ["GitHub CLI token invalid", "Production PostgreSQL, TLS, hosted payments, and external email are not configured for local staging"],
   "last_test_command": "python3 -m unittest discover -s tests -v",

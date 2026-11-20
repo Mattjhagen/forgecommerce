@@ -29,3 +29,9 @@ Next: add customer records, order search/status operations, editor rollback and 
 Added tenant-scoped customer records updated transactionally at checkout, order search, fulfillment status transitions, and customer listing. The full suite passes 12 tests.
 
 Next: add product variants/collections and editor rollback controls, then implement broader security validation and backup/restore tests.
+
+## 2026-11-19 — Variant catalog checkpoint
+
+Added tenant-scoped product variants with unique SKUs, prices, and inventory, including catalog retrieval and duplicate-SKU rejection. Full suite: 13 tests passing.
+
+Next: add collections, editor rollback controls, and backup/restore verification.

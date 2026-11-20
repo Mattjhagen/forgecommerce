@@ -33,6 +33,8 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="pages": return self.send_json(200,self.server.commerce.public_page(parts[1],parts[3]))
             auth=self.auth()
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
+            if path.startswith("/api/products/") and path.endswith("/variants"):
+                return self.send_json(200,{"variants":self.server.commerce.variants(auth,path.split("/")[3])})
             if path.startswith("/api/products/"): return self.send_json(200,self.server.commerce.product(auth,path.rsplit("/",1)[1]))
             if path.startswith("/api/carts/"): return self.send_json(200,self.server.commerce.cart(auth,path.rsplit("/",1)[1]))
             if path=="/api/orders": return self.send_json(200,{"orders":self.server.commerce.orders(auth,parse_qs(urlparse(self.path).query).get("search",[""])[0])})
@@ -56,6 +58,8 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="items": return self.send_json(200,c.public_cart_add(parts[1],data.get("cart_id"),data.get("product_id"),data.get("quantity")))
             auth=self.auth()
             if path=="/api/products": return self.send_json(201,c.product_create(auth,data))
+            if path.startswith("/api/products/") and path.endswith("/variants"):
+                return self.send_json(201,c.variant_create(auth,path.split("/")[3],data))
             if path.startswith("/api/products/") and path.endswith("/inventory"):
                 return self.send_json(200,c.inventory_update(auth,path.split("/")[3],data.get("inventory")))
             if path=="/api/carts": return self.send_json(201,c.cart_create(auth))

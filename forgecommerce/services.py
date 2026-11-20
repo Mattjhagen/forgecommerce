@@ -54,7 +54,20 @@ class Commerce:
     def product(self, auth, pid):
         row = self.db.execute("SELECT id,name,slug,price_cents,inventory,status,created_at FROM products WHERE tenant_id=? AND id=?", (auth["tenant_id"], pid)).fetchone()
         if not row: raise DomainError("product not found", 404)
-        return dict(row)
+        result=dict(row); result["variants"]=[dict(v) for v in self.db.execute("SELECT id,sku,name,price_cents,inventory,created_at FROM product_variants WHERE product_id=? AND tenant_id=? ORDER BY created_at",(pid,auth["tenant_id"]))]; return result
+    def variants(self, auth, pid):
+        self.product(auth,pid)
+        return [dict(row) for row in self.db.execute("SELECT id,sku,name,price_cents,inventory,created_at FROM product_variants WHERE product_id=? AND tenant_id=? ORDER BY created_at",(pid,auth["tenant_id"]))]
+    def variant_create(self, auth, pid, data):
+        self.product(auth,pid); sku=str(data.get("sku","")).strip().upper(); name=str(data.get("name","")).strip(); price=data.get("price_cents"); inventory=data.get("inventory",0)
+        if not sku or not name or not isinstance(price,int) or price<0 or not isinstance(inventory,int) or inventory<0: raise DomainError("sku, name, non-negative price_cents and inventory required")
+        vid=new_id()
+        try: self.db.execute("INSERT INTO product_variants VALUES (?,?,?,?,?,?,?,?)",(vid,pid,auth["tenant_id"],sku,name[:200],price,inventory,now()))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("SKU already exists",409)
+            raise
+        self.audit(auth["tenant_id"],auth["id"],"product.variant.created","product_variant",vid,{"sku":sku})
+        return dict(self.db.execute("SELECT id,sku,name,price_cents,inventory,created_at FROM product_variants WHERE id=?",(vid,)).fetchone())
     def inventory_update(self, auth, pid, inventory):
         if not isinstance(inventory, int) or inventory < 0: raise DomainError("inventory must be a non-negative integer")
         changed = self.db.execute("UPDATE products SET inventory=? WHERE id=? AND tenant_id=?", (inventory, pid, auth["tenant_id"]))

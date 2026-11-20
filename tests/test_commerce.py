@@ -44,5 +44,11 @@ class CommerceTests(unittest.TestCase):
         self.assertEqual(self.c.customers(self.aa)[0]['order_count'],1)
         self.assertEqual(len(self.c.orders(self.aa,'search.example')),1)
         self.assertEqual(self.c.order_status(self.aa,order['id'],'fulfilled')['fulfillment_status'],'fulfilled')
+    def test_variants_are_tenant_scoped_and_sku_unique(self):
+        p=self.c.product_create(self.aa, {'name':'Tee','price_cents':2000,'inventory':0})
+        variant=self.c.variant_create(self.aa,p['id'],{'sku':'TEE-RED-M','name':'Red / Medium','price_cents':2200,'inventory':4})
+        self.assertEqual(self.c.product(self.aa,p['id'])['variants'][0]['sku'],'TEE-RED-M')
+        with self.assertRaises(DomainError): self.c.product(self.bb,p['id'])
+        with self.assertRaises(DomainError): self.c.variant_create(self.aa,p['id'],{'sku':'TEE-RED-M','name':'Duplicate','price_cents':1,'inventory':1})
 
 if __name__=='__main__': unittest.main()
