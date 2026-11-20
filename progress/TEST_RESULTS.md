@@ -10,3 +10,4 @@
 - Secret-pattern scan for common AWS/GitHub/private-key markers: PASS.
 - GitHub authentication: BLOCKED; `gh auth status` reports the stored token is invalid.
 - Git checkpoint push: BLOCKED until GitHub authentication is repaired.
+- Local checkpoint commit: PASS, `4a7f434` on `autonomous/development`.
