@@ -64,5 +64,7 @@ class CommerceTests(unittest.TestCase):
         staff=self.c.staff_create(self.aa,{'email':'metrics-staff@example.com','password':'staff password','role':'manager'})
         staff_auth=self.c.authenticate(self.c.login('metrics-staff@example.com','staff password')['token'])
         with self.assertRaises(DomainError): self.c.admin_health(staff_auth)
+        usage=self.c.usage(self.aa); self.assertEqual(usage['plan'],'starter'); self.assertEqual(usage['usage']['products'],1)
+        with self.assertRaises(DomainError): self.c.usage(staff_auth)
 
 if __name__=='__main__': unittest.main()

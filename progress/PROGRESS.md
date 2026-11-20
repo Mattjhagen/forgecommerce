@@ -59,3 +59,9 @@ Next: add malicious-content regression coverage and platform administration/heal
 Added tenant-scoped revenue/order/customer/inventory analytics and owner-only database health with table counts. Staff access is denied. Full suite: 17 tests passing.
 
 Next: add malicious-content regression coverage, usage quotas, and platform-wide administration controls.
+
+## 2026-11-20 — Tenant quotas checkpoint
+
+Added starter-plan tenant limits, owner-only usage reporting, and product/page quota enforcement. Full suite remains green at 17 tests.
+
+Next: add malicious-content regression coverage, platform-wide administration, webhooks, and public API key management.

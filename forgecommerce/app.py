@@ -49,6 +49,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/customers": return self.send_json(200,{"customers":self.server.commerce.customers(auth)})
             if path=="/api/analytics": return self.send_json(200,self.server.commerce.analytics(auth))
             if path=="/api/admin/health": return self.send_json(200,self.server.commerce.admin_health(auth))
+            if path=="/api/admin/usage": return self.send_json(200,self.server.commerce.usage(auth))
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})

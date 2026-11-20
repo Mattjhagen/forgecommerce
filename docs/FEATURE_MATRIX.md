@@ -9,7 +9,7 @@ Statuses: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `IMPLEMENTED`, `VERIFIED`. On
 | Commerce | Products, variants, inventory, carts, sandbox checkout, orders | IN_PROGRESS | `tests/test_commerce.py`, `tests/test_api.py` (variants/SKUs/collections verified; provider integrations remain) |
 | Operations | Analytics, customers, imports, staff roles, billing | IN_PROGRESS | `tests/test_commerce.py` (analytics/customers/order search/staff roles; imports/billing remain) |
 | Advanced | REST API, webhooks, domains, SEO, CMS, i18n, search | NOT_STARTED | |
-| Administration | Super-admin, quotas, health, backups, migration controls | IN_PROGRESS | `forgecommerce/backup.py`, `/api/admin/health`, `tests/test_backup.py` (tenant health/backup verified; super-admin/quotas remain) |
+| Administration | Super-admin, quotas, health, backups, migration controls | IN_PROGRESS | `/api/admin/health`, `/api/admin/usage`, `forgecommerce/backup.py`, `tests/test_backup.py` (tenant quotas/health/backup verified; super-admin remains) |
 | Security | Isolation, authz, validation, rate limits, XSS/CSRF, idempotency | IN_PROGRESS | `tests/test_commerce.py` (isolation, auth, validation, idempotency) |
 
 The matrix is intentionally conservative while the first foundation checkpoint is being built.

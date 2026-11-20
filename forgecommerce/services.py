@@ -22,6 +22,7 @@ class Commerce:
             self.db.execute("BEGIN")
             self.db.execute("INSERT INTO tenants VALUES (?,?,?,?)", (tenant_id, store_name.strip()[:100], slugify(store_name), now()))
             self.db.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (user_id, tenant_id, email, password_hash, "owner", now()))
+            self.db.execute("INSERT INTO tenant_limits (tenant_id) VALUES (?)", (tenant_id,))
             self.db.execute("COMMIT")
         except Exception:
             self.db.execute("ROLLBACK")
@@ -41,6 +42,8 @@ class Commerce:
         if not row: raise DomainError("invalid or expired session", 401)
         return row
     def product_create(self, auth, data):
+        limit=self.db.execute("SELECT product_limit FROM tenant_limits WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
+        if limit and self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0] >= limit[0]: raise DomainError("product quota exceeded",409)
         name = str(data.get("name", "")).strip(); price = data.get("price_cents"); inventory = data.get("inventory", 0)
         if not name or not isinstance(price, int) or price < 0 or not isinstance(inventory, int) or inventory < 0: raise DomainError("name, non-negative integer price_cents and inventory required")
         pid = new_id(); slug = slugify(name)
@@ -159,6 +162,10 @@ class Commerce:
         if auth["role"] != "owner": raise DomainError("owner access required",403)
         integrity=self.db.execute("PRAGMA integrity_check").fetchone()[0]
         return {"status":"ok" if integrity=="ok" else "degraded","database_integrity":integrity,"tenant_id":auth["tenant_id"],"table_counts":{"products":self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"orders":self.db.execute("SELECT COUNT(*) FROM orders WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"pages":self.db.execute("SELECT COUNT(*) FROM pages WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0]}}
+    def usage(self, auth):
+        if auth["role"] != "owner": raise DomainError("owner access required",403)
+        limits=self.db.execute("SELECT plan,product_limit,page_limit,staff_limit FROM tenant_limits WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
+        return {"plan":limits["plan"],"limits":dict(limits),"usage":{"products":self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"pages":self.db.execute("SELECT COUNT(*) FROM pages WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"staff":self.db.execute("SELECT COUNT(*) FROM users WHERE tenant_id=? AND role!='owner'",(auth["tenant_id"],)).fetchone()[0]}}
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)
@@ -176,6 +183,8 @@ class Commerce:
         page["versions"] = versions
         return page
     def page_create(self, auth, data):
+        limit=self.db.execute("SELECT page_limit FROM tenant_limits WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
+        if limit and self.db.execute("SELECT COUNT(*) FROM pages WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0] >= limit[0]: raise DomainError("page quota exceeded",409)
         title = str(data.get("title", "")).strip(); slug = slugify(str(data.get("slug") or title))
         if not title: raise DomainError("title required")
         pid = new_id(); timestamp = now()
