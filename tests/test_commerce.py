@@ -26,6 +26,7 @@ class CommerceTests(unittest.TestCase):
         page=self.c.page_version(self.aa,page['id'],{'content':{'sections':['hero','products']},'seo':{'title':'Alpha'}})
         self.assertEqual(len(page['versions']),2)
         self.assertEqual(self.c.page_publish(self.aa,page['id'],1)['published_version'],1)
+        self.assertEqual(self.c.page_rollback(self.aa,page['id'],2)['published_version'],2)
         self.assertEqual(self.c.flag_set(self.aa,'new_editor',True)['enabled'],True)
         self.assertEqual(self.c.flags(self.bb),[])
     def test_invalid_password_and_cross_tenant_cart_are_rejected(self):

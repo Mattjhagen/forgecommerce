@@ -5,7 +5,7 @@ Statuses: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `IMPLEMENTED`, `VERIFIED`. On
 | Area | Capability | Status | Evidence |
 |---|---|---|---|
 | Foundation | Configuration, schema, migrations, auth, tenants, audit, flags | VERIFIED | `tests/test_commerce.py`, `tests/test_api.py` |
-| Builder | Pages, sections, responsive preview, versions, publish, rollback | IN_PROGRESS | `/editor`, `/store/{slug}`, `tests/test_api.py`, `tests/test_commerce.py` (rollback and richer component library remain) |
+| Builder | Pages, sections, responsive preview, versions, publish, rollback | IN_PROGRESS | `/editor`, `/store/{slug}`, `tests/test_api.py`, `tests/test_commerce.py` (rollback verified; richer component library remains) |
 | Commerce | Products, variants, inventory, carts, sandbox checkout, orders | IN_PROGRESS | `tests/test_commerce.py`, `tests/test_api.py` (variants/SKUs/collections verified; provider integrations remain) |
 | Operations | Analytics, customers, imports, staff roles, billing | IN_PROGRESS | `tests/test_commerce.py` (customers/order search/staff roles; analytics/imports/billing remain) |
 | Advanced | REST API, webhooks, domains, SEO, CMS, i18n, search | NOT_STARTED | |

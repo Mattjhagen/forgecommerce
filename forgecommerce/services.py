@@ -195,6 +195,9 @@ class Commerce:
         self.db.execute("UPDATE pages SET status='published',published_version=?,updated_at=? WHERE id=?", (version, now(), page_id))
         self.audit(auth["tenant_id"], auth["id"], "page.published", "page", page_id, {"version": version})
         return self.page(auth, page_id)
+    def page_rollback(self, auth, page_id, version):
+        if not isinstance(version, int) or version < 1: raise DomainError("positive version required")
+        return self.page_publish(auth, page_id, version)
     def flags(self, auth):
         return [dict(row) for row in self.db.execute("SELECT name,enabled FROM feature_flags WHERE tenant_id=? ORDER BY name", (auth["tenant_id"],))]
     def flag_set(self, auth, name, enabled):

@@ -33,7 +33,7 @@ class ApiTests(unittest.TestCase):
             page=response.read().decode(); self.assertIn('HTML Shop',page); self.assertIn('Add to cart',page)
         req=Request(self.base+'/editor',method='GET')
         with urlopen(req) as response:
-            editor=response.read().decode(); self.assertIn('Visual editor',editor); self.assertIn('/api/pages',editor)
+            editor=response.read().decode(); self.assertIn('Visual editor',editor); self.assertIn('/api/pages',editor); self.assertIn('Rollback to version 1',editor)
     def test_guest_storefront_browse_cart_and_checkout(self):
         _, auth=self.call('POST','/api/auth/register',{'email':'merchant@example.com','password':'long enough password','store_name':'Guest Shop'})
         _, product=self.call('POST','/api/products',{'name':'Hat','price_cents':1800,'inventory':1},auth['token'])

@@ -47,3 +47,9 @@ Next: add editor rollback controls, rate limiting, stricter input/security tests
 Added process-local HTTP rate limiting and escaped merchant-controlled product names in the storefront renderer. The full suite passes 16 tests, including limiter behavior.
 
 Next: add editor rollback controls, security regression tests for malicious content, and platform administration surfaces.
+
+## 2026-11-19 — Editor rollback checkpoint
+
+Added explicit page rollback semantics and a browser editor rollback control selecting a prior immutable version. Full suite remains green at 16 tests.
+
+Next: add malicious-content regression coverage and platform administration/health surfaces.
