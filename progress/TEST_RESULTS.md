@@ -52,3 +52,12 @@
 
 - Non-HTTP regression suite: 20 passed.
 - HTTP/load regression suite: 10 passed.
+
+## 2026-11-20 — Coupon and resumable runner
+
+- `python3 -m unittest tests.test_runner tests.test_commerce tests.test_payments tests.test_backup tests.test_security -v`: PASS (22 tests).
+- `python3 -m compileall -q forgecommerce scripts`: PASS.
+- `bash -n scripts/*.sh`: PASS.
+- `git diff --check`: PASS.
+- Runner behavior verified with fakes: bounded recovery reaches `recovery_required` after three restarts; Codex thread ID is persisted for resume; isolated state/session overrides prevent test or supervisor overlap.
+- HTTP/API follow-up is pending: the current sandbox now rejects all local socket binds with `PermissionError: [Errno 1] Operation not permitted`; the pre-change baseline had passed 31 tests.

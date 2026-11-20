@@ -54,6 +54,16 @@ class ApiTests(unittest.TestCase):
         self.call('POST','/store/guest-shop/carts/items',{'cart_id':cart['id'],'product_id':product['id'],'quantity':1})
         _, order=self.call('POST','/store/guest-shop/carts/checkout',{'cart_id':cart['id'],'customer_email':'guest@example.com'},headers={'Idempotency-Key':'guest-1'})
         self.assertEqual(order['payment_status'],'paid_sandbox')
+
+    def test_coupon_management_and_discounted_checkout_over_http(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'coupon-http@example.com','password':'long enough password','store_name':'Coupon HTTP'})
+        _, coupon=self.call('POST','/api/coupons',{'code':'SAVE10','percent_off':10},auth['token'])
+        _, product=self.call('POST','/api/products',{'name':'Coupon Mug','price_cents':1000,'inventory':1},auth['token'])
+        _, cart=self.call('POST','/api/carts',token=auth['token'])
+        self.call('POST',f"/api/carts/{cart['id']}/items",{'product_id':product['id'],'quantity':1},auth['token'])
+        _, order=self.call('POST','/api/checkout',{'cart_id':cart['id'],'customer_email':'coupon-http-buyer@example.com','coupon_code':'save10'},auth['token'],{'Idempotency-Key':'coupon-http-1'})
+        self.assertEqual(order['total_cents'],900)
+        self.assertEqual(self.call('GET','/api/coupons',token=auth['token'])[1]['coupons'][0]['id'],coupon['id'])
     def test_public_search_and_sitemap(self):
         _, auth=self.call('POST','/api/auth/register',{'email':'seo@example.com','password':'long enough password','store_name':'SEO Shop'})
         _, product=self.call('POST','/api/products',{'name':'Blue Shoes','price_cents':3000,'inventory':4},auth['token'])

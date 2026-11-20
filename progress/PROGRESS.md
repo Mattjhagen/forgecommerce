@@ -108,6 +108,18 @@ Hardened backup creation with source integrity validation and atomic destination
 
 Next: deepen production adapter documentation and continue unimplemented commerce capabilities.
 
+## 2026-11-20 — Coupon and resumable-runner checkpoint
+
+Added tenant-scoped percentage coupons to authenticated and public checkout, with owner/admin management, deactivation, discount audit metadata, and idempotent totals. Hardened the autonomous runner to use an overridable state directory/session name, persist Codex thread IDs from JSON output, and resume with structured output. Added executable tests for bounded recovery and session persistence. The non-HTTP regression suite passes 22 tests; HTTP verification is pending because this session denies local socket binds with `EPERM`.
+
+Next: restore local socket test capability, verify the new HTTP coupon route, then implement shipping and tax adapter contracts.
+
+## 2026-11-20 — Coupon checkout checkpoint
+
+Added tenant-scoped percentage coupons with owner/admin management, deactivation, checkout-time discounts, public checkout support, audit metadata, and idempotent order behavior.
+
+Next: verify the complete suite, then continue shipping/tax and other unimplemented commerce adapters.
+
 ## 2026-11-20 — Public CMS and accessibility checkpoint
 
 Added HTTP coverage for published blog listing, escaped blog HTML, and RSS feed delivery. Strengthened storefront/editor accessibility assertions and verified CSP headers on rendered HTML. Full suite: 29 tests passing.

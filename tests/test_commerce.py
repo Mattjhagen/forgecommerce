@@ -21,6 +21,16 @@ class CommerceTests(unittest.TestCase):
         again=self.c.checkout(self.aa,cart['id'],'buyer@example.com','order-1')
         self.assertEqual(order['id'],again['id']); self.assertEqual(self.c.product(self.aa,p['id'])['inventory'],1)
         self.assertEqual(self.c.refund(self.aa,order['id'])['payment_status'],'refunded')
+
+    def test_coupon_discount_is_tenant_scoped_and_idempotent(self):
+        coupon=self.c.coupon_create(self.aa,{'code':'SAVE20','percent_off':20})
+        self.assertEqual(coupon['percent_off'],20)
+        product=self.c.product_create(self.aa,{'name':'Discounted','price_cents':1000,'inventory':2}); cart=self.c.cart_create(self.aa); self.c.cart_add(self.aa,cart['id'],product['id'],1)
+        order=self.c.checkout(self.aa,cart['id'],'coupon@example.com','coupon-1','save20'); self.assertEqual(order['total_cents'],800)
+        self.assertEqual(self.c.checkout(self.aa,cart['id'],'coupon@example.com','coupon-1','save20')['id'],order['id'])
+        self.c.coupon_deactivate(self.aa,coupon['id'])
+        other=self.c.register('coupon-other@example.com','long enough password','Other Shop'); other_auth=self.c.authenticate(other['token'])
+        with self.assertRaises(DomainError): self.c.checkout(other_auth, self.c.cart_create(other_auth)['id'], 'x@example.com', 'coupon-2', 'SAVE20')
     def test_page_versions_publish_and_flags(self):
         page=self.c.page_create(self.aa,{'title':'Home','content':{'sections':['hero']}})
         page=self.c.page_version(self.aa,page['id'],{'content':{'sections':['hero','products']},'seo':{'title':'Alpha'}})

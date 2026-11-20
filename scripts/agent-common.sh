@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_DIR="$ROOT_DIR/progress/runtime"
+STATE_DIR="${FORGECOMMERCE_STATE_DIR:-$ROOT_DIR/progress/runtime}"
 STATE_FILE="$STATE_DIR/agent-state.json"
 LOG_DIR="$STATE_DIR/logs"
 LOCK_FILE="$STATE_DIR/agent.lock"
-SESSION_NAME="forgecommerce-agent"
+SESSION_NAME="${FORGECOMMERCE_SESSION_NAME:-forgecommerce-agent}"
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 now_utc() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 json_set() {

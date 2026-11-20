@@ -171,31 +171,58 @@ class Commerce:
         if not cart: raise DomainError("cart not found",404)
         items = [dict(r) for r in self.db.execute("SELECT ci.product_id, p.name, ci.quantity, ci.unit_price_cents, ci.quantity*ci.unit_price_cents AS line_total_cents FROM cart_items ci JOIN products p ON p.id=ci.product_id WHERE ci.cart_id=?", (cid,))]
         return {"id":cid,"status":cart["status"],"items":items,"total_cents":sum(x["line_total_cents"] for x in items)}
-    def checkout(self, auth, cid, email, key):
+    def coupons(self, auth):
+        if auth["role"] not in {"owner", "admin"}: raise DomainError("admin access required", 403)
+        return [dict(row) for row in self.db.execute("SELECT id,code,percent_off,active,created_at FROM coupons WHERE tenant_id=? ORDER BY created_at DESC", (auth["tenant_id"],))]
+    def coupon_create(self, auth, data):
+        if auth["role"] not in {"owner", "admin"}: raise DomainError("admin access required", 403)
+        code=str(data.get("code", "")).strip().upper()
+        percent=data.get("percent_off")
+        if not re.match(r"^[A-Z0-9][A-Z0-9_-]{2,31}$", code) or not isinstance(percent, int) or not 1 <= percent <= 100: raise DomainError("valid code and percent_off from 1 to 100 required")
+        cid=new_id()
+        try: self.db.execute("INSERT INTO coupons VALUES (?,?,?,?,?,?)", (cid,auth["tenant_id"],code,percent,1,now()))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("coupon code already exists", 409)
+            raise
+        self.audit(auth["tenant_id"],auth["id"],"coupon.created","coupon",cid,{"code":code,"percent_off":percent})
+        return dict(self.db.execute("SELECT id,code,percent_off,active,created_at FROM coupons WHERE id=?", (cid,)).fetchone())
+    def coupon_deactivate(self, auth, cid):
+        if auth["role"] not in {"owner", "admin"}: raise DomainError("admin access required", 403)
+        changed=self.db.execute("UPDATE coupons SET active=0 WHERE id=? AND tenant_id=?", (cid,auth["tenant_id"]))
+        if changed.rowcount != 1: raise DomainError("coupon not found", 404)
+        self.audit(auth["tenant_id"],auth["id"],"coupon.deactivated","coupon",cid)
+        return dict(self.db.execute("SELECT id,code,percent_off,active,created_at FROM coupons WHERE id=?", (cid,)).fetchone())
+    def _discounted_total(self, auth, total, code):
+        if not code: return total, None
+        coupon=self.db.execute("SELECT * FROM coupons WHERE tenant_id=? AND code=? AND active=1", (auth["tenant_id"],str(code).strip().upper())).fetchone()
+        if not coupon: raise DomainError("invalid or inactive coupon", 400)
+        return (total * (100 - coupon["percent_off"])) // 100, dict(coupon)
+    def checkout(self, auth, cid, email, key, coupon_code=None):
         if not key or len(key)>128: raise DomainError("Idempotency-Key required")
         existing = self.db.execute("SELECT * FROM orders WHERE tenant_id=? AND idempotency_key=?", (auth["tenant_id"],key)).fetchone()
         if existing: return dict(existing)
         cart = self.cart(auth,cid); email = email.strip().lower()
         if not cart["items"] or "@" not in email: raise DomainError("non-empty cart and valid customer_email required")
+        total, coupon = self._discounted_total(auth, cart["total_cents"], coupon_code)
         oid = new_id()
         try:
             self.db.execute("BEGIN")
-            payment=self.payment_provider.charge(key,cart["total_cents"])
+            payment=self.payment_provider.charge(key,total)
             for item in cart["items"]:
                 changed = self.db.execute("UPDATE products SET inventory=inventory-? WHERE id=? AND tenant_id=? AND inventory>=?", (item["quantity"],item["product_id"],auth["tenant_id"],item["quantity"]))
                 if changed.rowcount != 1: raise DomainError("inventory changed; retry checkout",409)
             timestamp=now(); customer=self.db.execute("SELECT id FROM customers WHERE tenant_id=? AND email=?",(auth["tenant_id"],email)).fetchone()
             if customer:
-                self.db.execute("UPDATE customers SET order_count=order_count+1,total_spend_cents=total_spend_cents+?,updated_at=? WHERE id=?",(cart["total_cents"],timestamp,customer["id"]))
+                self.db.execute("UPDATE customers SET order_count=order_count+1,total_spend_cents=total_spend_cents+?,updated_at=? WHERE id=?",(total,timestamp,customer["id"]))
             else:
-                self.db.execute("INSERT INTO customers VALUES (?,?,?,?,?,?,?,?)",(new_id(),auth["tenant_id"],email,None,1,cart["total_cents"],timestamp,timestamp))
-            self.db.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)", (oid,auth["tenant_id"],cid,email,cart["total_cents"],payment.status,"unfulfilled",key,now()))
+                self.db.execute("INSERT INTO customers VALUES (?,?,?,?,?,?,?,?)",(new_id(),auth["tenant_id"],email,None,1,total,timestamp,timestamp))
+            self.db.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)", (oid,auth["tenant_id"],cid,email,total,payment.status,"unfulfilled",key,now()))
             for item in cart["items"]: self.db.execute("INSERT INTO order_items VALUES (?,?,?,?,?)", (oid,item["product_id"],item["name"],item["quantity"],item["unit_price_cents"]))
             self.db.execute("UPDATE carts SET status='converted',customer_email=? WHERE id=?",(email,cid)); self.db.execute("COMMIT")
         except (DomainError,PaymentError) as exc: self.db.execute("ROLLBACK"); raise DomainError(str(exc),409)
         except Exception: self.db.execute("ROLLBACK"); raise DomainError("checkout could not be completed",409)
-        self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":cart["total_cents"]})
-        self.emit_webhook(auth["tenant_id"],"order.created",{"id":oid,"total_cents":cart["total_cents"],"customer_email":email})
+        self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":total,"coupon":coupon["code"] if coupon else None})
+        self.emit_webhook(auth["tenant_id"],"order.created",{"id":oid,"total_cents":total,"customer_email":email})
         return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
     def orders(self, auth, search=""):
         query="SELECT id,customer_email,total_cents,payment_status,fulfillment_status,created_at FROM orders WHERE tenant_id=?"; args=[auth["tenant_id"]]
@@ -400,9 +427,9 @@ class Commerce:
         tenant = self.tenant(slug); auth = {"tenant_id": tenant["id"]}; return self.cart_add(auth, cid, pid, quantity)
     def public_cart(self, slug, cid):
         tenant = self.tenant(slug); return self.cart({"tenant_id": tenant["id"]}, cid)
-    def public_checkout(self, slug, cid, email, key):
+    def public_checkout(self, slug, cid, email, key, coupon_code=None):
         tenant = self.tenant(slug); owner = self.db.execute("SELECT id FROM users WHERE tenant_id=? AND role='owner' ORDER BY created_at LIMIT 1", (tenant["id"],)).fetchone()
-        return self.checkout({"tenant_id": tenant["id"], "id": owner["id"] if owner else None}, cid, email, key)
+        return self.checkout({"tenant_id": tenant["id"], "id": owner["id"] if owner else None}, cid, email, key, coupon_code)
     def staff_list(self, auth):
         if auth["role"] != "owner": raise DomainError("owner access required", 403)
         return [dict(row) for row in self.db.execute("SELECT id,email,role,created_at FROM users WHERE tenant_id=? ORDER BY created_at", (auth["tenant_id"],))]

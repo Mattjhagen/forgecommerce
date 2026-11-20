@@ -75,6 +75,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/billing/subscription": return self.send_json(200,self.server.commerce.subscription(auth))
             if path=="/api/domains": return self.send_json(200,{"domains":self.server.commerce.domains(auth)})
             if path=="/api/blog/posts": return self.send_json(200,{"posts":self.server.commerce.blog_posts(auth)})
+            if path=="/api/coupons": return self.send_json(200,{"coupons":self.server.commerce.coupons(auth)})
             if path=="/api/api-keys": return self.send_json(200,{"keys":self.server.commerce.api_keys(auth)})
             if path=="/api/webhooks": return self.send_json(200,{"webhooks":self.server.commerce.webhooks(auth)})
             if path.startswith("/api/webhooks/") and path.endswith("/deliveries"): return self.send_json(200,{"deliveries":self.server.commerce.webhook_deliveries(auth,path.split("/")[3])})
@@ -93,7 +94,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200,c.platform_set_status(self.headers.get("X-Platform-Admin",""),path.split("/")[3],data.get("status")))
             parts=path.strip("/").split("/")
             if len(parts)==3 and parts[0]=="store" and parts[2]=="carts": return self.send_json(201,c.public_cart_create(parts[1]))
-            if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="checkout": return self.send_json(201,c.public_checkout(parts[1],data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="checkout": return self.send_json(201,c.public_checkout(parts[1],data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key",""),data.get("coupon_code")))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="items": return self.send_json(200,c.public_cart_add(parts[1],data.get("cart_id"),data.get("product_id"),data.get("quantity")))
             auth=self.auth()
             if path=="/api/products/import": return self.send_json(200,c.products_import(auth,data.get("csv","")))
@@ -108,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/carts": return self.send_json(201,c.cart_create(auth))
             if path.startswith("/api/carts/") and path.endswith("/items"):
                 return self.send_json(200,c.cart_add(auth,path.split("/")[3],data.get("product_id"),data.get("quantity")))
-            if path=="/api/checkout": return self.send_json(201,c.checkout(auth,data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
+            if path=="/api/checkout": return self.send_json(201,c.checkout(auth,data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key",""),data.get("coupon_code")))
             if path=="/api/pages": return self.send_json(201,c.page_create(auth,data))
             if path.startswith("/api/pages/") and path.endswith("/translations"):
                 return self.send_json(200,c.translation_upsert(auth,path.split("/")[3],data.get("locale"),data))
@@ -126,6 +127,8 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/billing/subscription": return self.send_json(200,c.subscription_change(auth,data.get("plan"),data.get("action","activate")))
             if path=="/api/domains": return self.send_json(201,c.domain_add(auth,data.get("hostname")))
             if path=="/api/blog/posts": return self.send_json(201,c.blog_create(auth,data))
+            if path=="/api/coupons": return self.send_json(201,c.coupon_create(auth,data))
+            if path.startswith("/api/coupons/") and path.endswith("/deactivate"): return self.send_json(200,c.coupon_deactivate(auth,path.split("/")[3]))
             if path.startswith("/api/blog/posts/") and path.endswith("/publish"): return self.send_json(200,c.blog_publish(auth,path.split("/")[4]))
             if path.startswith("/api/domains/") and path.endswith("/verify"):
                 return self.send_json(200,c.domain_verify(auth,path.split("/")[3],data.get("verification_token")))
