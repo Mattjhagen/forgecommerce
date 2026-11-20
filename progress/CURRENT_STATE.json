@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-19T23:25:00-06:00",
-  "phase": "visual-builder-security",
-  "checkpoint": "editor-rollback",
+  "updated_at": "2026-11-19T23:45:00-06:00",
+  "phase": "operations-administration",
+  "checkpoint": "tenant-analytics-admin-health",
   "status": "in_progress",
-  "next_action": "Add malicious-content regression coverage and platform administration/health surfaces",
-  "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "guest-storefront-checkout", "order-refund", "staff-role-authorization", "customer-records", "order-search-status", "thread-safe-http-api", "storefront-html", "editor-html-shell", "rate-limiting", "output-escaping", "page-rollback"],
+  "next_action": "Add malicious-content regression coverage, usage quotas, and platform-wide administration controls",
+  "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "guest-storefront-checkout", "order-refund", "staff-role-authorization", "customer-records", "order-search-status", "tenant-analytics", "owner-admin-health", "thread-safe-http-api", "storefront-html", "editor-html-shell", "rate-limiting", "output-escaping", "page-rollback"],
   "known_blockers": ["GitHub CLI token invalid", "Production PostgreSQL, TLS, hosted payments, and external email are not configured for local staging"],
   "last_test_command": "python3 -m unittest discover -s tests -v",
   "last_successful_checkpoint": "b990a5f"

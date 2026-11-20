@@ -57,5 +57,12 @@ class CommerceTests(unittest.TestCase):
         self.c.collection_add(self.aa,collection['id'],p['id'])
         self.assertEqual(self.c.collection(self.aa,collection['id'])['products'][0]['id'],p['id'])
         with self.assertRaises(DomainError): self.c.collection(self.bb,collection['id'])
+    def test_analytics_and_admin_health_are_scoped_to_owner(self):
+        p=self.c.product_create(self.aa, {'name':'Analytics Item','price_cents':1000,'inventory':1})
+        cart=self.c.cart_create(self.aa); self.c.cart_add(self.aa,cart['id'],p['id'],1); self.c.checkout(self.aa,cart['id'],'metrics@example.com','metrics-1')
+        metrics=self.c.analytics(self.aa); self.assertEqual(metrics['orders'],1); self.assertEqual(metrics['gross_cents'],1000); self.assertEqual(self.c.admin_health(self.aa)['status'],'ok')
+        staff=self.c.staff_create(self.aa,{'email':'metrics-staff@example.com','password':'staff password','role':'manager'})
+        staff_auth=self.c.authenticate(self.c.login('metrics-staff@example.com','staff password')['token'])
+        with self.assertRaises(DomainError): self.c.admin_health(staff_auth)
 
 if __name__=='__main__': unittest.main()

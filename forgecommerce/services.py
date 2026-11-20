@@ -151,6 +151,14 @@ class Commerce:
         return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
     def customers(self, auth):
         return [dict(row) for row in self.db.execute("SELECT id,email,name,order_count,total_spend_cents,created_at,updated_at FROM customers WHERE tenant_id=? ORDER BY updated_at DESC", (auth["tenant_id"],))]
+    def analytics(self, auth):
+        tenant=auth["tenant_id"]
+        totals=self.db.execute("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status='paid_sandbox' THEN total_cents ELSE 0 END),0) AS gross_cents,COALESCE(SUM(CASE WHEN payment_status='refunded' THEN total_cents ELSE 0 END),0) AS refunded_cents FROM orders WHERE tenant_id=?",(tenant,)).fetchone()
+        return {"orders":totals["orders"],"gross_cents":totals["gross_cents"],"refunded_cents":totals["refunded_cents"],"customers":self.db.execute("SELECT COUNT(*) FROM customers WHERE tenant_id=?",(tenant,)).fetchone()[0],"products":self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(tenant,)).fetchone()[0],"low_inventory_products":[dict(row) for row in self.db.execute("SELECT id,name,inventory FROM products WHERE tenant_id=? AND inventory<=5 ORDER BY inventory",(tenant,))]}
+    def admin_health(self, auth):
+        if auth["role"] != "owner": raise DomainError("owner access required",403)
+        integrity=self.db.execute("PRAGMA integrity_check").fetchone()[0]
+        return {"status":"ok" if integrity=="ok" else "degraded","database_integrity":integrity,"tenant_id":auth["tenant_id"],"table_counts":{"products":self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"orders":self.db.execute("SELECT COUNT(*) FROM orders WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0],"pages":self.db.execute("SELECT COUNT(*) FROM pages WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0]}}
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)

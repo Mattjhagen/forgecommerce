@@ -53,3 +53,9 @@ Next: add editor rollback controls, security regression tests for malicious cont
 Added explicit page rollback semantics and a browser editor rollback control selecting a prior immutable version. Full suite remains green at 16 tests.
 
 Next: add malicious-content regression coverage and platform administration/health surfaces.
+
+## 2026-11-19 — Analytics and admin health checkpoint
+
+Added tenant-scoped revenue/order/customer/inventory analytics and owner-only database health with table counts. Staff access is denied. Full suite: 17 tests passing.
+
+Next: add malicious-content regression coverage, usage quotas, and platform-wide administration controls.
