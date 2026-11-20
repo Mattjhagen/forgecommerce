@@ -7,6 +7,6 @@
   "verified_features": ["supervised-runner-local-tests", "bounded-recovery-test", "daily-report-generator", "tenant-authentication", "tenant-isolation", "catalog-inventory", "cart-sandbox-checkout", "guest-storefront-checkout", "order-refund", "staff-role-authorization", "customer-records", "order-search-status", "tenant-analytics", "owner-admin-health", "tenant-quotas-usage", "api-key-authentication", "signed-webhooks", "custom-domain-verification", "public-search", "sitemap-generation", "published-page-seo", "malicious-content-regression", "multilingual-page-content", "csv-catalog-import-export", "sandbox-billing-subscriptions", "sandbox-payment-adapter", "platform-admin-tenant-controls", "migration-controls", "concurrent-health-load", "thread-safe-http-api", "storefront-html", "editor-html-shell", "rate-limiting", "output-escaping", "page-rollback", "tenant-blog-cms", "public-blog-feed"],
   "known_blockers": ["GitHub CLI token invalid", "Production PostgreSQL, TLS, hosted payments, and external email are not configured for local staging"],
   "last_test_command": "python3 -m unittest tests.test_commerce tests.test_payments tests.test_backup tests.test_security tests.test_runner tests.test_api tests.test_load -v",
-  "last_successful_checkpoint": "pending-public-cms-commit",
-  "last_sync": {"status": "pending", "branch": "autonomous/development", "commit": "pending-public-cms-commit"}
+  "last_successful_checkpoint": "08020ce",
+  "last_sync": {"status": "confirmed", "branch": "autonomous/development", "commit": "08020ce", "timestamp": "2026-11-20T11:25:00Z"}
 }
