@@ -37,3 +37,9 @@
 - `python3 -m unittest tests.test_commerce tests.test_payments tests.test_backup tests.test_security tests.test_runner -v` — 19 passed.
 - `python3 -m unittest tests.test_api tests.test_load -v` — 9 passed.
 - Coverage includes draft/publish authorization, tenant-scoped blog storage, escaped public content, public listing, and RSS-style feed output.
+
+## 2026-11-20 — Public CMS and accessibility
+
+- Non-HTTP regression suite: 19 passed.
+- HTTP/load regression suite: 10 passed.
+- Coverage includes public blog listing/detail/feed routes, HTML escaping, CSP headers, viewport/main landmarks, editor labels, and the concurrent health smoke test.

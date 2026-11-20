@@ -51,8 +51,9 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="page": return self.send_html(200,self.public_page_html(parts[1],parts[3],parse_qs(urlparse(self.path).query).get("lang",[None])[0]))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="collections": return self.send_json(200,self.server.commerce.public_collection(parts[1],parts[3]))
             if len(parts)==3 and parts[0]=="store" and parts[2]=="feed.xml": return self.send_xml(200,self.server.commerce.public_blog_feed(parts[1]))
-            if len(parts)==3 and parts[0]=="store" and parts[2]=="blog": return self.send_json(200,{"posts":[{"slug":p["slug"],"title":p["title"],"excerpt":p["excerpt"]} for p in self.server.commerce.db.execute("SELECT slug,title,excerpt FROM blog_posts b JOIN tenants t ON t.id=b.tenant_id JOIN tenant_controls tc ON tc.tenant_id=t.id WHERE t.slug=? AND b.status='published' ORDER BY published_at DESC",(parts[1],))]})
-            if len(parts)==4 and parts[0]=="store" and parts[2]=="blog": return self.send_html(200,"<html><head><title>%s</title></head><body><article><h1>%s</h1><p>%s</p><div>%s</div></article></body></html>"%(self.server.commerce.public_blog_post(parts[1],parts[3])["title"],self.server.commerce.public_blog_post(parts[1],parts[3])["title"],self.server.commerce.public_blog_post(parts[1],parts[3])["excerpt"],self.server.commerce.public_blog_post(parts[1],parts[3])["content"]))
+            if len(parts)==3 and parts[0]=="store" and parts[2]=="blog": return self.send_json(200,{"posts":self.server.commerce.public_blog_posts(parts[1])})
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="blog":
+                post=self.server.commerce.public_blog_post(parts[1],parts[3]); return self.send_html(200,"<html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>%s</title></head><body><main><article><h1>%s</h1><p>%s</p><div>%s</div></article></main></body></html>"%(post["title"],post["title"],post["excerpt"],post["content"]))
             auth=self.auth()
             if path=="/api/products/export.csv": return self.send_csv(200,self.server.commerce.products_csv(auth))
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
@@ -125,7 +126,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/billing/subscription": return self.send_json(200,c.subscription_change(auth,data.get("plan"),data.get("action","activate")))
             if path=="/api/domains": return self.send_json(201,c.domain_add(auth,data.get("hostname")))
             if path=="/api/blog/posts": return self.send_json(201,c.blog_create(auth,data))
-            if path.startswith("/api/blog/posts/") and path.endswith("/publish"): return self.send_json(200,c.blog_publish(auth,path.split("/")[3]))
+            if path.startswith("/api/blog/posts/") and path.endswith("/publish"): return self.send_json(200,c.blog_publish(auth,path.split("/")[4]))
             if path.startswith("/api/domains/") and path.endswith("/verify"):
                 return self.send_json(200,c.domain_verify(auth,path.split("/")[3],data.get("verification_token")))
             if path=="/api/api-keys": return self.send_json(201,c.api_key_create(auth,data.get("name")))

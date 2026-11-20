@@ -274,6 +274,9 @@ class Commerce:
         tenant=self.tenant(slug); row=self.db.execute("SELECT * FROM blog_posts WHERE tenant_id=? AND slug=? AND status='published'",(tenant["id"],post_slug)).fetchone()
         if not row: raise DomainError("published post not found",404)
         result=dict(row); result["title"]=html.escape(result["title"]); result["excerpt"]=html.escape(result["excerpt"]); result["content"]=html.escape(result["content"]); return result
+    def public_blog_posts(self, slug):
+        tenant=self.tenant(slug)
+        return [{"slug":row["slug"],"title":html.escape(row["title"]),"excerpt":html.escape(row["excerpt"])} for row in self.db.execute("SELECT slug,title,excerpt FROM blog_posts WHERE tenant_id=? AND status='published' ORDER BY published_at DESC",(tenant["id"],))]
     def public_blog_feed(self, slug):
         tenant=self.tenant(slug); rows=self.db.execute("SELECT slug,title,excerpt,published_at FROM blog_posts WHERE tenant_id=? AND status='published' ORDER BY published_at DESC LIMIT 50",(tenant["id"],))
         entries=[]

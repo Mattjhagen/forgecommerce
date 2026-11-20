@@ -102,6 +102,12 @@ Added tenant-scoped draft/publish blog posts, escaped public post rendering, a p
 
 Next: deepen accessibility checks, failure recovery, and production adapter documentation.
 
+## 2026-11-20 — Public CMS and accessibility checkpoint
+
+Added HTTP coverage for published blog listing, escaped blog HTML, and RSS feed delivery. Strengthened storefront/editor accessibility assertions and verified CSP headers on rendered HTML. Full suite: 29 tests passing.
+
+Next: deepen failure recovery and production adapter documentation.
+
 ## 2026-11-20 — Sandbox billing checkpoint
 
 Added provider-neutral sandbox subscriptions with starter/growth/scale plan transitions, owner authorization, and quota updates. Full suite: 23 tests passing.

@@ -30,10 +30,21 @@ class ApiTests(unittest.TestCase):
         _, auth=self.call('POST','/api/auth/register',{'email':'html@example.com','password':'long enough password','store_name':'HTML Shop'})
         req=Request(self.base+'/store/html-shop',method='GET')
         with urlopen(req) as response:
-            page=response.read().decode(); self.assertIn('HTML Shop',page); self.assertIn('Add to cart',page)
+            page=response.read().decode(); self.assertIn('HTML Shop',page); self.assertIn('Add to cart',page); self.assertIn("name='viewport'",page); self.assertIn('<main',page); self.assertIn('Content-Security-Policy', '\n'.join(f'{k}: {v}' for k,v in response.headers.items()))
         req=Request(self.base+'/editor',method='GET')
         with urlopen(req) as response:
-            editor=response.read().decode(); self.assertIn('Visual editor',editor); self.assertIn('/api/pages',editor); self.assertIn('Rollback to version 1',editor)
+            editor=response.read().decode(); self.assertIn('Visual editor',editor); self.assertIn('/api/pages',editor); self.assertIn('Rollback to version 1',editor); self.assertIn("name='viewport'",editor); self.assertIn('<label>Bearer token',editor); self.assertIn('<textarea',editor)
+
+    def test_public_blog_routes_render_published_content_safely(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'blog-http@example.com','password':'long enough password','store_name':'Blog Shop'})
+        _, post=self.call('POST','/api/blog/posts',{'title':'Hello','excerpt':'Summary','content':'<script>alert(1)</script>'},auth['token'])
+        self.call('POST',f"/api/blog/posts/{post['id']}/publish",{},auth['token'])
+        listing=self.call('GET','/store/blog-shop/blog')[1]; self.assertEqual(listing['posts'][0]['slug'],'hello')
+        req=Request(self.base+'/store/blog-shop/blog/hello',method='GET')
+        with urlopen(req) as response:
+            body=response.read().decode(); self.assertIn('<h1>Hello</h1>',body); self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;',body); self.assertNotIn('<script>alert(1)</script>',body); self.assertIn('Content-Security-Policy', '\n'.join(f'{k}: {v}' for k,v in response.headers.items()))
+        req=Request(self.base+'/store/blog-shop/feed.xml',method='GET')
+        with urlopen(req) as response: self.assertIn('<item>',response.read().decode())
     def test_guest_storefront_browse_cart_and_checkout(self):
         _, auth=self.call('POST','/api/auth/register',{'email':'merchant@example.com','password':'long enough password','store_name':'Guest Shop'})
         _, product=self.call('POST','/api/products',{'name':'Hat','price_cents':1800,'inventory':1},auth['token'])
