@@ -20,4 +20,9 @@ PY
   fi
   sleep "$delay"
 done
-json_set last_sync '{"status":"failed","reason":"remote unavailable or authentication failed"}'; exit 1
+python3 - "$STATE_FILE" <<'PY'
+import json,sys
+from datetime import datetime,timezone
+p=sys.argv[1]; d=json.load(open(p)); d['last_sync']={'status':'failed','reason':'remote unavailable or authentication failed','timestamp':datetime.now(timezone.utc).isoformat()}; open(p,'w').write(json.dumps(d,indent=2,sort_keys=True)+'\n')
+PY
+exit 1
