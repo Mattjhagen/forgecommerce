@@ -49,5 +49,11 @@ class ApiTests(unittest.TestCase):
         result=self.call('GET','/store/seo-shop/search?q=shoes')[1]; self.assertEqual(result['products'][0]['id'],product['id'])
         req=Request(self.base+'/store/seo-shop/sitemap.xml',method='GET')
         with urlopen(req) as response: xml=response.read().decode(); self.assertIn("sitemaps.org",xml); self.assertIn('blue-shoes',xml)
+    def test_published_page_seo_is_rendered_publicly(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'page-seo@example.com','password':'long enough password','store_name':'Page SEO'})
+        _, page=self.call('POST','/api/pages',{'title':'About','content':{'sections':[{'heading':'About us'}]},'seo':{'title':'About Page','description':'A safe description'}},auth['token'])
+        self.call('POST',f"/api/pages/{page['id']}/publish",{},auth['token'])
+        req=Request(self.base+'/store/page-seo/page/about',method='GET')
+        with urlopen(req) as response: body=response.read().decode(); self.assertIn('<title>About Page</title>',body); self.assertIn('About us',body); self.assertIn('A safe description',body)
 
 if __name__=='__main__': unittest.main()

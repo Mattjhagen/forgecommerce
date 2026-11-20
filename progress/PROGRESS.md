@@ -77,3 +77,9 @@ Next: add malicious-content regression coverage, public search/SEO metadata, and
 Added public tenant-scoped product search and standards-compatible sitemap XML generation. Full suite: 19 tests passing.
 
 Next: add page SEO rendering, malicious-content regression coverage, and platform-wide administration controls.
+
+## 2026-11-20 — Published SEO checkpoint
+
+Added safe public HTML rendering for published pages with escaped SEO title/description and section headings. Full suite: 20 tests passing.
+
+Next: add malicious-content regression coverage, multilingual content primitives, and platform-wide administration controls.
