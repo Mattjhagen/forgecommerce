@@ -35,3 +35,9 @@ Next: add product variants/collections and editor rollback controls, then implem
 Added tenant-scoped product variants with unique SKUs, prices, and inventory, including catalog retrieval and duplicate-SKU rejection. Full suite: 13 tests passing.
 
 Next: add collections, editor rollback controls, and backup/restore verification.
+
+## 2026-11-19 — Collections and recovery checkpoint
+
+Added tenant-scoped product collections with public collection browsing and verified the SQLite backup/restore utility against tenant and catalog data. Full suite: 15 tests passing.
+
+Next: add editor rollback controls, rate limiting, stricter input/security tests, and platform administration surfaces.

@@ -50,5 +50,11 @@ class CommerceTests(unittest.TestCase):
         self.assertEqual(self.c.product(self.aa,p['id'])['variants'][0]['sku'],'TEE-RED-M')
         with self.assertRaises(DomainError): self.c.product(self.bb,p['id'])
         with self.assertRaises(DomainError): self.c.variant_create(self.aa,p['id'],{'sku':'TEE-RED-M','name':'Duplicate','price_cents':1,'inventory':1})
+    def test_collections_are_tenant_scoped(self):
+        p=self.c.product_create(self.aa, {'name':'Cap','price_cents':1500,'inventory':2})
+        collection=self.c.collection_create(self.aa,{'name':'Summer Picks'})
+        self.c.collection_add(self.aa,collection['id'],p['id'])
+        self.assertEqual(self.c.collection(self.aa,collection['id'])['products'][0]['id'],p['id'])
+        with self.assertRaises(DomainError): self.c.collection(self.bb,collection['id'])
 
 if __name__=='__main__': unittest.main()

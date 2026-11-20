@@ -31,6 +31,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/editor": return self.send_html(200,self.editor_html())
             if len(parts)==3 and parts[0]=="store" and parts[2]=="products": return self.send_json(200,{"products":self.server.commerce.public_products(parts[1])})
             if len(parts)==4 and parts[0]=="store" and parts[2]=="pages": return self.send_json(200,self.server.commerce.public_page(parts[1],parts[3]))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="collections": return self.send_json(200,self.server.commerce.public_collection(parts[1],parts[3]))
             auth=self.auth()
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
             if path.startswith("/api/products/") and path.endswith("/variants"):
@@ -58,6 +59,9 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="items": return self.send_json(200,c.public_cart_add(parts[1],data.get("cart_id"),data.get("product_id"),data.get("quantity")))
             auth=self.auth()
             if path=="/api/products": return self.send_json(201,c.product_create(auth,data))
+            if path=="/api/collections": return self.send_json(201,c.collection_create(auth,data))
+            if path.startswith("/api/collections/") and path.endswith("/products"):
+                return self.send_json(200,c.collection_add(auth,path.split("/")[3],data.get("product_id")))
             if path.startswith("/api/products/") and path.endswith("/variants"):
                 return self.send_json(201,c.variant_create(auth,path.split("/")[3],data))
             if path.startswith("/api/products/") and path.endswith("/inventory"):

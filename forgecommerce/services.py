@@ -68,6 +68,30 @@ class Commerce:
             raise
         self.audit(auth["tenant_id"],auth["id"],"product.variant.created","product_variant",vid,{"sku":sku})
         return dict(self.db.execute("SELECT id,sku,name,price_cents,inventory,created_at FROM product_variants WHERE id=?",(vid,)).fetchone())
+    def collection_create(self, auth, data):
+        name=str(data.get("name","")).strip(); slug=slugify(str(data.get("slug") or name))
+        if not name: raise DomainError("collection name required")
+        cid=new_id()
+        try: self.db.execute("INSERT INTO collections VALUES (?,?,?,?,?)",(cid,auth["tenant_id"],name[:200],slug,now()))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("collection slug already exists",409)
+            raise
+        self.audit(auth["tenant_id"],auth["id"],"collection.created","collection",cid)
+        return self.collection(auth,cid)
+    def collection(self, auth, cid):
+        row=self.db.execute("SELECT id,name,slug,created_at FROM collections WHERE id=? AND tenant_id=?",(cid,auth["tenant_id"])).fetchone()
+        if not row: raise DomainError("collection not found",404)
+        result=dict(row); result["products"]=[dict(p) for p in self.db.execute("SELECT p.id,p.name,p.slug,p.price_cents,p.inventory FROM collection_products cp JOIN products p ON p.id=cp.product_id WHERE cp.collection_id=? AND cp.tenant_id=?",(cid,auth["tenant_id"]))]; return result
+    def collection_add(self, auth, cid, pid):
+        self.collection(auth,cid); self.product(auth,pid)
+        try: self.db.execute("INSERT INTO collection_products VALUES (?,?,?)",(cid,pid,auth["tenant_id"]))
+        except Exception:
+            pass
+        return self.collection(auth,cid)
+    def public_collection(self, slug, collection_slug):
+        tenant=self.tenant(slug); row=self.db.execute("SELECT id,name,slug FROM collections WHERE tenant_id=? AND slug=?",(tenant["id"],collection_slug)).fetchone()
+        if not row: raise DomainError("collection not found",404)
+        return {"id":row["id"],"name":row["name"],"slug":row["slug"],"products":[dict(p) for p in self.db.execute("SELECT p.id,p.name,p.slug,p.price_cents,p.inventory FROM collection_products cp JOIN products p ON p.id=cp.product_id WHERE cp.collection_id=? AND p.status='active'",(row["id"],))]}
     def inventory_update(self, auth, pid, inventory):
         if not isinstance(inventory, int) or inventory < 0: raise DomainError("inventory must be a non-negative integer")
         changed = self.db.execute("UPDATE products SET inventory=? WHERE id=? AND tenant_id=?", (inventory, pid, auth["tenant_id"]))
