@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, tenant_id TEXT NOT NUL
 CREATE TABLE IF NOT EXISTS webhook_deliveries (id TEXT PRIMARY KEY, webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE, event_type TEXT NOT NULL, payload_json TEXT NOT NULL, signature TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS pages (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, slug TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', published_version INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(tenant_id, slug));
 CREATE TABLE IF NOT EXISTS page_versions (page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE, version INTEGER NOT NULL, content_json TEXT NOT NULL, seo_json TEXT NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(page_id, version));
+CREATE TABLE IF NOT EXISTS page_translations (page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE, locale TEXT NOT NULL, content_json TEXT NOT NULL, seo_json TEXT NOT NULL, created_by TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(page_id, locale));
 CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_audit_tenant_time ON audit_events(tenant_id, created_at);
 """

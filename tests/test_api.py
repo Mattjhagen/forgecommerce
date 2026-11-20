@@ -60,5 +60,14 @@ class ApiTests(unittest.TestCase):
         req=Request(self.base+'/store/page-seo/page/safe',method='GET')
         with urlopen(req) as response:
             body=response.read().decode(); self.assertNotIn('<title><script>',body); self.assertIn('&lt;script&gt;x&lt;/script&gt;',body)
+    def test_page_translation_locale_overrides_default_and_falls_back(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'locale@example.com','password':'long enough password','store_name':'Locale Shop'})
+        _, page=self.call('POST','/api/pages',{'title':'Welcome','content':{'sections':[{'heading':'Welcome'}]},'seo':{'title':'Welcome'}},auth['token'])
+        self.call('POST',f"/api/pages/{page['id']}/translations",{'locale':'fr-FR','content':{'sections':[{'heading':'Bienvenue'}]},'seo':{'title':'Bienvenue'}},auth['token'])
+        self.call('POST',f"/api/pages/{page['id']}/publish",{},auth['token'])
+        req=Request(self.base+'/store/locale-shop/page/welcome?lang=fr-FR',method='GET')
+        with urlopen(req) as response: self.assertIn('Bienvenue',response.read().decode())
+        req=Request(self.base+'/store/locale-shop/page/welcome?lang=de',method='GET')
+        with urlopen(req) as response: self.assertIn('Welcome',response.read().decode())
 
 if __name__=='__main__': unittest.main()

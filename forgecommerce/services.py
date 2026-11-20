@@ -278,12 +278,25 @@ class Commerce:
         urls += [f"/store/{slug}/products/{row['slug']}" for row in self.db.execute("SELECT slug FROM products WHERE tenant_id=? AND status='active'",(tenant["id"],))]
         urls += [f"/store/{slug}/page/{row['slug']}" for row in self.db.execute("SELECT slug FROM pages WHERE tenant_id=? AND status='published'",(tenant["id"],))]
         return "<?xml version='1.0' encoding='UTF-8'?><urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>"+"".join(f"<url><loc>{html.escape(url)}</loc></url>" for url in urls)+"</urlset>"
-    def public_page(self, slug, page_slug):
+    def public_page(self, slug, page_slug, locale=None):
         tenant = self.tenant(slug)
         page = self.db.execute("SELECT * FROM pages WHERE tenant_id=? AND slug=? AND status='published'", (tenant["id"], page_slug)).fetchone()
         if not page: raise DomainError("published page not found", 404)
         version = self.db.execute("SELECT * FROM page_versions WHERE page_id=? AND version=?", (page["id"], page["published_version"])).fetchone()
-        result = dict(page); result["content_json"] = version["content_json"]; result["seo_json"] = version["seo_json"]; return result
+        result = dict(page); result["content_json"] = version["content_json"]; result["seo_json"] = version["seo_json"]
+        if locale:
+            translation=self.db.execute("SELECT content_json,seo_json FROM page_translations WHERE page_id=? AND locale=?",(page["id"],locale)).fetchone()
+            if translation: result["content_json"],result["seo_json"]=translation["content_json"],translation["seo_json"]
+        return result
+    def translations(self, auth, page_id):
+        self.page(auth,page_id)
+        return [dict(row) for row in self.db.execute("SELECT locale,content_json,seo_json,created_by,updated_at FROM page_translations WHERE page_id=? ORDER BY locale",(page_id,))]
+    def translation_upsert(self, auth, page_id, locale, data):
+        self.page(auth,page_id); locale=str(locale or "").strip()
+        if not re.match(r"^[a-z]{2}(?:-[A-Z]{2})?$",locale): raise DomainError("locale must be like en or fr-FR")
+        self.db.execute("INSERT INTO page_translations VALUES (?,?,?,?,?,?) ON CONFLICT(page_id,locale) DO UPDATE SET content_json=excluded.content_json,seo_json=excluded.seo_json,created_by=excluded.created_by,updated_at=excluded.updated_at",(page_id,locale,json.dumps(data.get("content",{})),json.dumps(data.get("seo",{})),auth["id"],now()))
+        self.audit(auth["tenant_id"],auth["id"],"page.translation.updated","page",page_id,{"locale":locale})
+        return {"page_id":page_id,"locale":locale,"content":data.get("content",{}),"seo":data.get("seo",{})}
     def public_cart_create(self, slug):
         tenant = self.tenant(slug); cid = new_id(); self.db.execute("INSERT INTO carts VALUES (?,?,?,?,?)", (cid, tenant["id"], None, "open", now())); return {"id": cid, "store": slug, "items": [], "total_cents": 0}
     def public_cart_add(self, slug, cid, pid, quantity):

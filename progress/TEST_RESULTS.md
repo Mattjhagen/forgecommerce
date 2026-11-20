@@ -17,6 +17,7 @@
 - Current full suite: PASS (19 tests), including public search and sitemap generation.
 - Current full suite: PASS (20 tests), including published-page SEO rendering.
 - Current full suite: PASS (20 tests), including malicious SEO/heading escaping in published HTML.
+- Current full suite: PASS (21 tests), including multilingual page locale override and fallback.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.

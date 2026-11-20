@@ -89,3 +89,9 @@ Next: add malicious-content regression coverage, multilingual content primitives
 Added an end-to-end regression proving malicious SEO metadata and section headings are escaped in published HTML. Full suite: 20 tests passing.
 
 Next: add multilingual content primitives and platform-wide administration controls.
+
+## 2026-11-20 — Multilingual content checkpoint
+
+Added locale-keyed page translations with tenant ownership checks, locale validation, public locale overrides, and default-language fallback. Full suite: 21 tests passing.
+
+Next: add platform-wide administration controls, billing adapters, and deeper accessibility/load verification.

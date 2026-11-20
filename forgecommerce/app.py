@@ -17,8 +17,8 @@ class Handler(BaseHTTPRequestHandler):
     def storefront_html(self, slug):
         store=self.server.commerce.tenant(slug)
         return """<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>%s</title><style>body{font:16px system-ui;margin:0;color:#172033;background:#f6f7fb}header{padding:28px 7vw;background:#172033;color:white}main{padding:32px 7vw;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;box-shadow:0 5px 18px #17203312}.price{font-weight:700;font-size:1.2rem}button{background:#3457d5;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}</style></head><body><header><small>ForgeCommerce storefront</small><h1>%s</h1></header><main id='products'><p>Loading products…</p></main><script>const slug=%s;const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));fetch('/store/'+slug+'/products').then(r=>r.json()).then(({products})=>{document.querySelector('#products').innerHTML=products.map(p=>`<article class="card"><h2>${esc(p.name)}</h2><p class="price">$${(p.price_cents/100).toFixed(2)}</p><p>${Number(p.inventory)} available</p><button onclick="add('${encodeURIComponent(p.id)}')">Add to cart</button></article>`).join('')});let cart=null;async function add(id){id=decodeURIComponent(id);if(!cart)cart=await (await fetch('/store/'+slug+'/carts',{method:'POST'})).json();await fetch('/store/'+slug+'/carts/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cart_id:cart.id,product_id:id,quantity:1})});alert('Added to cart');}</script></body></html>""" % (html.escape(store["name"]), html.escape(store["name"]), json.dumps(slug))
-    def public_page_html(self, slug, page_slug):
-        page=self.server.commerce.public_page(slug,page_slug); seo=json.loads(page["seo_json"] or "{}"); content=json.loads(page["content_json"] or "{}"); title=html.escape(str(seo.get("title") or page["title"])); description=html.escape(str(seo.get("description") or "")); headings=[]
+    def public_page_html(self, slug, page_slug, locale=None):
+        page=self.server.commerce.public_page(slug,page_slug,locale); seo=json.loads(page["seo_json"] or "{}"); content=json.loads(page["content_json"] or "{}"); title=html.escape(str(seo.get("title") or page["title"])); description=html.escape(str(seo.get("description") or "")); headings=[]
         for section in content.get("sections",[]) if isinstance(content,dict) else []:
             if isinstance(section,dict) and section.get("heading"): headings.append(f"<h2>{html.escape(str(section['heading']))}</h2>")
         return f"<!doctype html><html><head><meta charset='utf-8'><meta name='description' content='{description}'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title}</title></head><body><main>{''.join(headings) or '<p>Published page</p>'}</main></body></html>"
@@ -43,8 +43,8 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==3 and parts[0]=="store" and parts[2]=="products": return self.send_json(200,{"products":self.server.commerce.public_products(parts[1])})
             if len(parts)==3 and parts[0]=="store" and parts[2]=="search": return self.send_json(200,{"products":self.server.commerce.public_search(parts[1],parse_qs(urlparse(self.path).query).get("q",[""])[0])})
             if len(parts)==3 and parts[0]=="store" and parts[2]=="sitemap.xml": return self.send_xml(200,self.server.commerce.sitemap(parts[1]))
-            if len(parts)==4 and parts[0]=="store" and parts[2]=="pages": return self.send_json(200,self.server.commerce.public_page(parts[1],parts[3]))
-            if len(parts)==4 and parts[0]=="store" and parts[2]=="page": return self.send_html(200,self.public_page_html(parts[1],parts[3]))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="pages": return self.send_json(200,self.server.commerce.public_page(parts[1],parts[3],parse_qs(urlparse(self.path).query).get("lang",[None])[0]))
+            if len(parts)==4 and parts[0]=="store" and parts[2]=="page": return self.send_html(200,self.public_page_html(parts[1],parts[3],parse_qs(urlparse(self.path).query).get("lang",[None])[0]))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="collections": return self.send_json(200,self.server.commerce.public_collection(parts[1],parts[3]))
             auth=self.auth()
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
@@ -54,6 +54,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/carts/"): return self.send_json(200,self.server.commerce.cart(auth,path.rsplit("/",1)[1]))
             if path=="/api/orders": return self.send_json(200,{"orders":self.server.commerce.orders(auth,parse_qs(urlparse(self.path).query).get("search",[""])[0])})
             if path=="/api/pages": return self.send_json(200,{"pages":self.server.commerce.pages(auth)})
+            if path.startswith("/api/pages/") and path.endswith("/translations"): return self.send_json(200,{"translations":self.server.commerce.translations(auth,path.split("/")[3])})
             if path.startswith("/api/pages/"): return self.send_json(200,self.server.commerce.page(auth,path.rsplit("/",1)[1]))
             if path=="/api/feature-flags": return self.send_json(200,{"flags":self.server.commerce.flags(auth)})
             if path=="/api/audit-events": return self.send_json(200,{"events":self.server.commerce.audit_events(auth)})
@@ -92,6 +93,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200,c.cart_add(auth,path.split("/")[3],data.get("product_id"),data.get("quantity")))
             if path=="/api/checkout": return self.send_json(201,c.checkout(auth,data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
             if path=="/api/pages": return self.send_json(201,c.page_create(auth,data))
+            if path.startswith("/api/pages/") and path.endswith("/translations"):
+                return self.send_json(200,c.translation_upsert(auth,path.split("/")[3],data.get("locale"),data))
             if path.startswith("/api/pages/") and path.endswith("/versions"):
                 return self.send_json(201,c.page_version(auth,path.split("/")[3],data))
             if path.startswith("/api/pages/") and path.endswith("/publish"):
