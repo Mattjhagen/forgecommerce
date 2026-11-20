@@ -22,7 +22,9 @@ class Handler(BaseHTTPRequestHandler):
         if length > self.server.settings.max_body_bytes: raise DomainError("request body too large",413)
         try: return json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError: raise DomainError("invalid JSON")
-    def auth(self): return self.server.commerce.authenticate(self.headers.get("Authorization","").removeprefix("Bearer ").strip())
+    def auth(self):
+        if self.headers.get("X-API-Key"): return self.server.commerce.authenticate_api_key(self.headers["X-API-Key"])
+        return self.server.commerce.authenticate(self.headers.get("Authorization","").removeprefix("Bearer ").strip())
     def do_GET(self):
         try:
             if not self.server.limiter.allow(self.client_address[0]): return self.send_json(429,{"error":"rate limit exceeded"})
@@ -50,6 +52,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/analytics": return self.send_json(200,self.server.commerce.analytics(auth))
             if path=="/api/admin/health": return self.send_json(200,self.server.commerce.admin_health(auth))
             if path=="/api/admin/usage": return self.send_json(200,self.server.commerce.usage(auth))
+            if path=="/api/api-keys": return self.send_json(200,{"keys":self.server.commerce.api_keys(auth)})
+            if path=="/api/webhooks": return self.send_json(200,{"webhooks":self.server.commerce.webhooks(auth)})
+            if path.startswith("/api/webhooks/") and path.endswith("/deliveries"): return self.send_json(200,{"deliveries":self.server.commerce.webhook_deliveries(auth,path.split("/")[3])})
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})
@@ -88,6 +93,9 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/orders/") and path.endswith("/status"):
                 return self.send_json(200,c.order_status(auth,path.split("/")[3],data.get("status")))
             if path=="/api/feature-flags": return self.send_json(200,c.flag_set(auth,data.get("name"),data.get("enabled")))
+            if path=="/api/api-keys": return self.send_json(201,c.api_key_create(auth,data.get("name")))
+            if path.startswith("/api/api-keys/") and path.endswith("/revoke"): return self.send_json(200,c.api_key_revoke(auth,path.split("/")[3]))
+            if path=="/api/webhooks": return self.send_json(201,c.webhook_create(auth,data))
             if path=="/api/staff": return self.send_json(201,c.staff_create(auth,data))
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})

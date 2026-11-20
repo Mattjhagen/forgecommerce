@@ -1,6 +1,6 @@
-import json, re
+import hashlib, hmac, json, re
 from datetime import datetime, timedelta, timezone
-from .security import hash_password, verify_password, token_hash, new_id
+from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def slugify(value): return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "store"
@@ -41,6 +41,42 @@ class Commerce:
         row = self.db.execute("SELECT * FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token_hash=? AND s.expires_at>?", (token_hash(token), now())).fetchone()
         if not row: raise DomainError("invalid or expired session", 401)
         return row
+    def authenticate_api_key(self, key):
+        row=self.db.execute("SELECT u.*,k.id AS api_key_id FROM users u JOIN api_keys k ON k.user_id=u.id WHERE k.key_hash=? AND k.revoked_at IS NULL",(api_key_hash(key),)).fetchone()
+        if not row: raise DomainError("invalid or revoked API key",401)
+        return row
+    def api_keys(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,name,prefix,created_at,revoked_at FROM api_keys WHERE tenant_id=? ORDER BY created_at DESC",(auth["tenant_id"],))]
+    def api_key_create(self, auth, name):
+        if auth["role"] not in {"owner","admin"}: raise DomainError("admin access required",403)
+        name=str(name or "").strip()
+        if not name: raise DomainError("API key name required")
+        raw="fc_live_"+new_id()+new_id(); kid=new_id(); prefix=raw[:14]
+        self.db.execute("INSERT INTO api_keys VALUES (?,?,?,?,?,?,?,?)",(kid,auth["tenant_id"],auth["id"],name[:100],api_key_hash(raw),prefix,now(),None))
+        self.audit(auth["tenant_id"],auth["id"],"api_key.created","api_key",kid,{"name":name})
+        return {"id":kid,"name":name,"prefix":prefix,"key":raw}
+    def api_key_revoke(self, auth, kid):
+        if auth["role"] not in {"owner","admin"}: raise DomainError("admin access required",403)
+        changed=self.db.execute("UPDATE api_keys SET revoked_at=? WHERE id=? AND tenant_id=? AND revoked_at IS NULL",(now(),kid,auth["tenant_id"]))
+        if changed.rowcount != 1: raise DomainError("API key not found",404)
+        self.audit(auth["tenant_id"],auth["id"],"api_key.revoked","api_key",kid); return {"id":kid,"revoked":True}
+    def webhook_create(self, auth, data):
+        if auth["role"] not in {"owner","admin"}: raise DomainError("admin access required",403)
+        url=str(data.get("url","")).strip(); events=data.get("events",["order.created"])
+        if not (url.startswith("https://") or url.startswith("http://localhost")) or not isinstance(events,list) or not events: raise DomainError("valid webhook URL and events required")
+        wid=new_id(); secret="whsec_"+new_id()+new_id(); self.db.execute("INSERT INTO webhooks VALUES (?,?,?,?,?,?,?)",(wid,auth["tenant_id"],url,secret,json.dumps(events),1,now())); self.audit(auth["tenant_id"],auth["id"],"webhook.created","webhook",wid)
+        return {"id":wid,"url":url,"events":events,"secret":secret}
+    def webhooks(self, auth):
+        return [{"id":r["id"],"url":r["url"],"events":json.loads(r["events_json"]),"active":bool(r["active"]),"created_at":r["created_at"]} for r in self.db.execute("SELECT id,url,events_json,active,created_at FROM webhooks WHERE tenant_id=? ORDER BY created_at DESC",(auth["tenant_id"],))]
+    def webhook_deliveries(self, auth, wid):
+        if not self.db.execute("SELECT 1 FROM webhooks WHERE id=? AND tenant_id=?",(wid,auth["tenant_id"])).fetchone(): raise DomainError("webhook not found",404)
+        return [dict(r) for r in self.db.execute("SELECT id,event_type,payload_json,signature,status,created_at FROM webhook_deliveries WHERE webhook_id=? ORDER BY created_at DESC",(wid,))]
+    def emit_webhook(self, tenant_id, event_type, payload):
+        encoded=json.dumps(payload,sort_keys=True,separators=(",",":"))
+        for hook in self.db.execute("SELECT * FROM webhooks WHERE tenant_id=? AND active=1",(tenant_id,)).fetchall():
+            if event_type not in json.loads(hook["events_json"]) and "*" not in json.loads(hook["events_json"]): continue
+            signature=hmac.new(hook["secret"].encode(),encoded.encode(),hashlib.sha256).hexdigest()
+            self.db.execute("INSERT INTO webhook_deliveries VALUES (?,?,?,?,?,?,?)",(new_id(),hook["id"],event_type,encoded,signature,"queued",now()))
     def product_create(self, auth, data):
         limit=self.db.execute("SELECT product_limit FROM tenant_limits WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()
         if limit and self.db.execute("SELECT COUNT(*) FROM products WHERE tenant_id=?",(auth["tenant_id"],)).fetchone()[0] >= limit[0]: raise DomainError("product quota exceeded",409)
@@ -140,6 +176,7 @@ class Commerce:
         except DomainError: self.db.execute("ROLLBACK"); raise
         except Exception: self.db.execute("ROLLBACK"); raise DomainError("checkout could not be completed",409)
         self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":cart["total_cents"]})
+        self.emit_webhook(auth["tenant_id"],"order.created",{"id":oid,"total_cents":cart["total_cents"],"customer_email":email})
         return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
     def orders(self, auth, search=""):
         query="SELECT id,customer_email,total_cents,payment_status,fulfillment_status,created_at FROM orders WHERE tenant_id=?"; args=[auth["tenant_id"]]

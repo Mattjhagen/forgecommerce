@@ -65,3 +65,9 @@ Next: add malicious-content regression coverage, usage quotas, and platform-wide
 Added starter-plan tenant limits, owner-only usage reporting, and product/page quota enforcement. Full suite remains green at 17 tests.
 
 Next: add malicious-content regression coverage, platform-wide administration, webhooks, and public API key management.
+
+## 2026-11-20 — API integration checkpoint
+
+Added hashed API-key authentication with revocation, webhook registration, signed order-created delivery records, and delivery inspection. Full suite: 18 tests passing.
+
+Next: add malicious-content regression coverage, public search/SEO metadata, and platform-wide administration controls.

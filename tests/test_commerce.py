@@ -1,4 +1,4 @@
-import tempfile, unittest
+import hashlib, hmac, json, tempfile, unittest
 from forgecommerce.db import connect
 from forgecommerce.services import Commerce, DomainError
 
@@ -66,5 +66,12 @@ class CommerceTests(unittest.TestCase):
         with self.assertRaises(DomainError): self.c.admin_health(staff_auth)
         usage=self.c.usage(self.aa); self.assertEqual(usage['plan'],'starter'); self.assertEqual(usage['usage']['products'],1)
         with self.assertRaises(DomainError): self.c.usage(staff_auth)
+    def test_api_key_authentication_and_signed_webhook_delivery(self):
+        key=self.c.api_key_create(self.aa,'integration'); api_auth=self.c.authenticate_api_key(key['key']); self.assertEqual(api_auth['tenant_id'],self.aa['tenant_id'])
+        product=self.c.product_create(self.aa,{'name':'Webhook Item','price_cents':700,'inventory':1}); hook=self.c.webhook_create(self.aa,{'url':'https://example.test/webhook','events':['order.created']})
+        cart=self.c.cart_create(self.aa); self.c.cart_add(self.aa,cart['id'],product['id'],1); order=self.c.checkout(self.aa,cart['id'],'hook@example.com','hook-1')
+        deliveries=self.c.webhook_deliveries(self.aa,hook['id']); self.assertEqual(deliveries[0]['event_type'],'order.created'); self.assertEqual(deliveries[0]['signature'],hmac.new(hook['secret'].encode(),deliveries[0]['payload_json'].encode(),hashlib.sha256).hexdigest()); self.assertEqual(json.loads(deliveries[0]['payload_json'])['id'],order['id'])
+        self.c.api_key_revoke(self.aa,key['id'])
+        with self.assertRaises(DomainError): self.c.authenticate_api_key(key['key'])
 
 if __name__=='__main__': unittest.main()

@@ -20,6 +20,9 @@ def verify_password(password: str, encoded: str) -> bool:
 def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
+def api_key_hash(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()
+
 def new_id() -> str:
     return secrets.token_urlsafe(16)
 
