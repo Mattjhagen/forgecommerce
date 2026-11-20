@@ -89,6 +89,11 @@ class Commerce:
             for item in cart["items"]:
                 changed = self.db.execute("UPDATE products SET inventory=inventory-? WHERE id=? AND tenant_id=? AND inventory>=?", (item["quantity"],item["product_id"],auth["tenant_id"],item["quantity"]))
                 if changed.rowcount != 1: raise DomainError("inventory changed; retry checkout",409)
+            timestamp=now(); customer=self.db.execute("SELECT id FROM customers WHERE tenant_id=? AND email=?",(auth["tenant_id"],email)).fetchone()
+            if customer:
+                self.db.execute("UPDATE customers SET order_count=order_count+1,total_spend_cents=total_spend_cents+?,updated_at=? WHERE id=?",(cart["total_cents"],timestamp,customer["id"]))
+            else:
+                self.db.execute("INSERT INTO customers VALUES (?,?,?,?,?,?,?,?)",(new_id(),auth["tenant_id"],email,None,1,cart["total_cents"],timestamp,timestamp))
             self.db.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)", (oid,auth["tenant_id"],cid,email,cart["total_cents"],"paid_sandbox","unfulfilled",key,now()))
             for item in cart["items"]: self.db.execute("INSERT INTO order_items VALUES (?,?,?,?,?)", (oid,item["product_id"],item["name"],item["quantity"],item["unit_price_cents"]))
             self.db.execute("UPDATE carts SET status='converted',customer_email=? WHERE id=?",(email,cid)); self.db.execute("COMMIT")
@@ -96,8 +101,19 @@ class Commerce:
         except Exception: self.db.execute("ROLLBACK"); raise DomainError("checkout could not be completed",409)
         self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":cart["total_cents"]})
         return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
-    def orders(self, auth):
-        return [dict(row) for row in self.db.execute("SELECT id,customer_email,total_cents,payment_status,fulfillment_status,created_at FROM orders WHERE tenant_id=? ORDER BY created_at DESC", (auth["tenant_id"],))]
+    def orders(self, auth, search=""):
+        query="SELECT id,customer_email,total_cents,payment_status,fulfillment_status,created_at FROM orders WHERE tenant_id=?"; args=[auth["tenant_id"]]
+        if search:
+            query += " AND (customer_email LIKE ? OR id LIKE ?)"; needle=f"%{search}%"; args.extend([needle,needle])
+        return [dict(row) for row in self.db.execute(query+" ORDER BY created_at DESC", args)]
+    def order_status(self, auth, oid, status):
+        if status not in {"unfulfilled", "processing", "fulfilled", "cancelled", "returned"}: raise DomainError("invalid fulfillment status")
+        changed=self.db.execute("UPDATE orders SET fulfillment_status=? WHERE id=? AND tenant_id=?",(status,oid,auth["tenant_id"]))
+        if changed.rowcount != 1: raise DomainError("order not found",404)
+        self.audit(auth["tenant_id"],auth["id"],"order.status.updated","order",oid,{"status":status})
+        return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
+    def customers(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,email,name,order_count,total_spend_cents,created_at,updated_at FROM customers WHERE tenant_id=? ORDER BY updated_at DESC", (auth["tenant_id"],))]
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)

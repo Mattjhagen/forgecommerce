@@ -6,6 +6,7 @@
 - Current full suite `python3 -m unittest discover -s tests -v`: PASS (8 tests), including localhost HTTP integration.
 - Expanded full suite `python3 -m unittest discover -s tests -v`: PASS (10 tests), including public storefront guest checkout and staff-role authorization.
 - Current full suite: PASS (11 tests), including storefront and visual-editor HTML reachability.
+- Current full suite: PASS (12 tests), including customer persistence, order search, and fulfillment status transitions.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.

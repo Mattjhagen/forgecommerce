@@ -23,3 +23,9 @@ Next: add customer records/order search and begin the visual editor shell with r
 Added a CSP-protected storefront HTML shell with responsive product grid and guest-cart interaction, plus a browser-reachable visual editor surface for creating and publishing versioned pages. The full suite now passes 11 tests.
 
 Next: add customer records, order search/status operations, editor rollback and richer sections, then expand security and accessibility coverage.
+
+## 2026-11-19 — Merchant operations checkpoint
+
+Added tenant-scoped customer records updated transactionally at checkout, order search, fulfillment status transitions, and customer listing. The full suite passes 12 tests.
+
+Next: add product variants/collections and editor rollback controls, then implement broader security validation and backup/restore tests.

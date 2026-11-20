@@ -1,6 +1,6 @@
 import html, json, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 from .config import Settings
 from .db import connect
 from .services import Commerce, DomainError
@@ -35,12 +35,13 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
             if path.startswith("/api/products/"): return self.send_json(200,self.server.commerce.product(auth,path.rsplit("/",1)[1]))
             if path.startswith("/api/carts/"): return self.send_json(200,self.server.commerce.cart(auth,path.rsplit("/",1)[1]))
-            if path=="/api/orders": return self.send_json(200,{"orders":self.server.commerce.orders(auth)})
+            if path=="/api/orders": return self.send_json(200,{"orders":self.server.commerce.orders(auth,parse_qs(urlparse(self.path).query).get("search",[""])[0])})
             if path=="/api/pages": return self.send_json(200,{"pages":self.server.commerce.pages(auth)})
             if path.startswith("/api/pages/"): return self.send_json(200,self.server.commerce.page(auth,path.rsplit("/",1)[1]))
             if path=="/api/feature-flags": return self.send_json(200,{"flags":self.server.commerce.flags(auth)})
             if path=="/api/audit-events": return self.send_json(200,{"events":self.server.commerce.audit_events(auth)})
             if path=="/api/staff": return self.send_json(200,{"staff":self.server.commerce.staff_list(auth)})
+            if path=="/api/customers": return self.send_json(200,{"customers":self.server.commerce.customers(auth)})
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})
@@ -68,6 +69,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200,c.page_publish(auth,path.split("/")[3],data.get("version")))
             if path.startswith("/api/orders/") and path.endswith("/refund"):
                 return self.send_json(200,c.refund(auth,path.split("/")[3]))
+            if path.startswith("/api/orders/") and path.endswith("/status"):
+                return self.send_json(200,c.order_status(auth,path.split("/")[3],data.get("status")))
             if path=="/api/feature-flags": return self.send_json(200,c.flag_set(auth,data.get("name"),data.get("enabled")))
             if path=="/api/staff": return self.send_json(201,c.staff_create(auth,data))
             raise DomainError("route not found",404)

@@ -37,5 +37,12 @@ class CommerceTests(unittest.TestCase):
         self.assertEqual(staff['role'],'manager'); self.assertEqual(len(self.c.staff_list(self.aa)),2)
         staff_auth=self.c.authenticate(self.c.login('manager@alpha.example','manager password')['token'])
         with self.assertRaises(DomainError): self.c.staff_list(staff_auth)
+    def test_customer_record_order_search_and_fulfillment_status(self):
+        p=self.c.product_create(self.aa, {'name':'Socks','price_cents':900,'inventory':2})
+        cart=self.c.cart_create(self.aa); self.c.cart_add(self.aa,cart['id'],p['id'],1)
+        order=self.c.checkout(self.aa,cart['id'],'buyer@search.example','search-1')
+        self.assertEqual(self.c.customers(self.aa)[0]['order_count'],1)
+        self.assertEqual(len(self.c.orders(self.aa,'search.example')),1)
+        self.assertEqual(self.c.order_status(self.aa,order['id'],'fulfilled')['fulfillment_status'],'fulfilled')
 
 if __name__=='__main__': unittest.main()
