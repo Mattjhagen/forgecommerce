@@ -17,3 +17,9 @@ Next: implement staff roles and customer/order operations, then build the storef
 Added public tenant storefront product browsing, guest carts and sandbox checkout, owner-managed staff roles, and role enforcement. The full HTTP/domain suite now passes 10 tests, including guest checkout and staff authorization.
 
 Next: add customer records/order search and begin the visual editor shell with responsive preview and publish/rollback UI.
+
+## 2026-11-19 — Editor/storefront UI checkpoint
+
+Added a CSP-protected storefront HTML shell with responsive product grid and guest-cart interaction, plus a browser-reachable visual editor surface for creating and publishing versioned pages. The full suite now passes 11 tests.
+
+Next: add customer records, order search/status operations, editor rollback and richer sections, then expand security and accessibility coverage.
