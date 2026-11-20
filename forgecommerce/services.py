@@ -44,8 +44,10 @@ class Commerce:
         name = str(data.get("name", "")).strip(); price = data.get("price_cents"); inventory = data.get("inventory", 0)
         if not name or not isinstance(price, int) or price < 0 or not isinstance(inventory, int) or inventory < 0: raise DomainError("name, non-negative integer price_cents and inventory required")
         pid = new_id(); slug = slugify(name)
-        try: self.db.execute("INSERT INTO products VALUES (?,?,?,?,?,?,?,?,?)", (pid, auth["tenant_id"], name[:200], slug, price, inventory, "active", now()))
-        except Exception: raise DomainError("product slug already exists", 409)
+        try: self.db.execute("INSERT INTO products VALUES (?,?,?,?,?,?,?,?)", (pid, auth["tenant_id"], name[:200], slug, price, inventory, "active", now()))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("product slug already exists", 409)
+            raise
         self.audit(auth["tenant_id"], auth["id"], "product.created", "product", pid, {"name": name})
         return self.product(auth, pid)
     def products(self, auth): return [dict(r) for r in self.db.execute("SELECT id,name,slug,price_cents,inventory,status,created_at FROM products WHERE tenant_id=? ORDER BY created_at", (auth["tenant_id"],))]
@@ -53,6 +55,12 @@ class Commerce:
         row = self.db.execute("SELECT id,name,slug,price_cents,inventory,status,created_at FROM products WHERE tenant_id=? AND id=?", (auth["tenant_id"], pid)).fetchone()
         if not row: raise DomainError("product not found", 404)
         return dict(row)
+    def inventory_update(self, auth, pid, inventory):
+        if not isinstance(inventory, int) or inventory < 0: raise DomainError("inventory must be a non-negative integer")
+        changed = self.db.execute("UPDATE products SET inventory=? WHERE id=? AND tenant_id=?", (inventory, pid, auth["tenant_id"]))
+        if changed.rowcount != 1: raise DomainError("product not found", 404)
+        self.audit(auth["tenant_id"], auth["id"], "inventory.updated", "product", pid, {"inventory": inventory})
+        return self.product(auth, pid)
     def cart_create(self, auth):
         cid = new_id(); self.db.execute("INSERT INTO carts VALUES (?,?,?,?,?)", (cid, auth["tenant_id"], None, "open", now())); return {"id": cid, "items": [], "total_cents": 0}
     def cart_add(self, auth, cid, pid, quantity):
@@ -88,3 +96,58 @@ class Commerce:
         except Exception: self.db.execute("ROLLBACK"); raise DomainError("checkout could not be completed",409)
         self.audit(auth["tenant_id"],auth["id"],"order.created","order",oid,{"total_cents":cart["total_cents"]})
         return dict(self.db.execute("SELECT * FROM orders WHERE id=?",(oid,)).fetchone())
+    def orders(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,customer_email,total_cents,payment_status,fulfillment_status,created_at FROM orders WHERE tenant_id=? ORDER BY created_at DESC", (auth["tenant_id"],))]
+    def refund(self, auth, oid):
+        row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
+        if not row: raise DomainError("order not found", 404)
+        if row["payment_status"] == "refunded": return dict(row)
+        self.db.execute("UPDATE orders SET payment_status='refunded' WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"]))
+        self.audit(auth["tenant_id"], auth["id"], "order.refunded", "order", oid)
+        return dict(self.db.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone())
+    def pages(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,slug,title,status,published_version,created_at,updated_at FROM pages WHERE tenant_id=? ORDER BY updated_at DESC", (auth["tenant_id"],))]
+    def page(self, auth, page_id):
+        row = self.db.execute("SELECT * FROM pages WHERE id=? AND tenant_id=?", (page_id, auth["tenant_id"])).fetchone()
+        if not row: raise DomainError("page not found", 404)
+        page = dict(row)
+        versions = [dict(v) for v in self.db.execute("SELECT version,content_json,seo_json,created_by,created_at FROM page_versions WHERE page_id=? ORDER BY version DESC", (page_id,))]
+        page["versions"] = versions
+        return page
+    def page_create(self, auth, data):
+        title = str(data.get("title", "")).strip(); slug = slugify(str(data.get("slug") or title))
+        if not title: raise DomainError("title required")
+        pid = new_id(); timestamp = now()
+        try:
+            self.db.execute("INSERT INTO pages VALUES (?,?,?,?,?,?,?,?)", (pid, auth["tenant_id"], slug, title[:200], "draft", None, timestamp, timestamp))
+            self.db.execute("INSERT INTO page_versions VALUES (?,?,?,?,?,?)", (pid, 1, json.dumps(data.get("content", {"sections": []})), json.dumps(data.get("seo", {})), auth["id"], timestamp))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("page slug already exists", 409)
+            raise
+        self.audit(auth["tenant_id"], auth["id"], "page.created", "page", pid)
+        return self.page(auth, pid)
+    def page_version(self, auth, page_id, data):
+        page = self.db.execute("SELECT * FROM pages WHERE id=? AND tenant_id=?", (page_id, auth["tenant_id"])).fetchone()
+        if not page: raise DomainError("page not found", 404)
+        version = self.db.execute("SELECT COALESCE(MAX(version),0)+1 FROM page_versions WHERE page_id=?", (page_id,)).fetchone()[0]
+        self.db.execute("INSERT INTO page_versions VALUES (?,?,?,?,?,?)", (page_id, version, json.dumps(data.get("content", {})), json.dumps(data.get("seo", {})), auth["id"], now()))
+        self.db.execute("UPDATE pages SET updated_at=? WHERE id=?", (now(), page_id))
+        self.audit(auth["tenant_id"], auth["id"], "page.version.created", "page", page_id, {"version": version})
+        return self.page(auth, page_id)
+    def page_publish(self, auth, page_id, version=None):
+        page = self.db.execute("SELECT * FROM pages WHERE id=? AND tenant_id=?", (page_id, auth["tenant_id"])).fetchone()
+        if not page: raise DomainError("page not found", 404)
+        version = version or self.db.execute("SELECT MAX(version) FROM page_versions WHERE page_id=?", (page_id,)).fetchone()[0]
+        if not self.db.execute("SELECT 1 FROM page_versions WHERE page_id=? AND version=?", (page_id, version)).fetchone(): raise DomainError("page version not found", 404)
+        self.db.execute("UPDATE pages SET status='published',published_version=?,updated_at=? WHERE id=?", (version, now(), page_id))
+        self.audit(auth["tenant_id"], auth["id"], "page.published", "page", page_id, {"version": version})
+        return self.page(auth, page_id)
+    def flags(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT name,enabled FROM feature_flags WHERE tenant_id=? ORDER BY name", (auth["tenant_id"],))]
+    def flag_set(self, auth, name, enabled):
+        if not isinstance(name, str) or not name or not isinstance(enabled, bool): raise DomainError("name and boolean enabled required")
+        self.db.execute("INSERT INTO feature_flags VALUES (?,?,?) ON CONFLICT(tenant_id,name) DO UPDATE SET enabled=excluded.enabled", (auth["tenant_id"], name[:100], int(enabled)))
+        self.audit(auth["tenant_id"], auth["id"], "feature_flag.updated", "feature_flag", name, {"enabled": enabled})
+        return {"name": name[:100], "enabled": enabled}
+    def audit_events(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT action,resource_type,resource_id,metadata_json,created_at FROM audit_events WHERE tenant_id=? ORDER BY created_at DESC LIMIT 200", (auth["tenant_id"],))]

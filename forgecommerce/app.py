@@ -23,6 +23,11 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/products": return self.send_json(200,{"products":self.server.commerce.products(auth)})
             if path.startswith("/api/products/"): return self.send_json(200,self.server.commerce.product(auth,path.rsplit("/",1)[1]))
             if path.startswith("/api/carts/"): return self.send_json(200,self.server.commerce.cart(auth,path.rsplit("/",1)[1]))
+            if path=="/api/orders": return self.send_json(200,{"orders":self.server.commerce.orders(auth)})
+            if path=="/api/pages": return self.send_json(200,{"pages":self.server.commerce.pages(auth)})
+            if path.startswith("/api/pages/"): return self.send_json(200,self.server.commerce.page(auth,path.rsplit("/",1)[1]))
+            if path=="/api/feature-flags": return self.send_json(200,{"flags":self.server.commerce.flags(auth)})
+            if path=="/api/audit-events": return self.send_json(200,{"events":self.server.commerce.audit_events(auth)})
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})
@@ -33,10 +38,20 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/auth/login": return self.send_json(200,c.login(data.get("email",""),data.get("password","")))
             auth=self.auth()
             if path=="/api/products": return self.send_json(201,c.product_create(auth,data))
+            if path.startswith("/api/products/") and path.endswith("/inventory"):
+                return self.send_json(200,c.inventory_update(auth,path.split("/")[3],data.get("inventory")))
             if path=="/api/carts": return self.send_json(201,c.cart_create(auth))
             if path.startswith("/api/carts/") and path.endswith("/items"):
                 return self.send_json(200,c.cart_add(auth,path.split("/")[3],data.get("product_id"),data.get("quantity")))
             if path=="/api/checkout": return self.send_json(201,c.checkout(auth,data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
+            if path=="/api/pages": return self.send_json(201,c.page_create(auth,data))
+            if path.startswith("/api/pages/") and path.endswith("/versions"):
+                return self.send_json(201,c.page_version(auth,path.split("/")[3],data))
+            if path.startswith("/api/pages/") and path.endswith("/publish"):
+                return self.send_json(200,c.page_publish(auth,path.split("/")[3],data.get("version")))
+            if path.startswith("/api/orders/") and path.endswith("/refund"):
+                return self.send_json(200,c.refund(auth,path.split("/")[3]))
+            if path=="/api/feature-flags": return self.send_json(200,c.flag_set(auth,data.get("name"),data.get("enabled")))
             raise DomainError("route not found",404)
         except DomainError as e: self.send_json(e.status,{"error":e.message})
         except Exception: self.send_json(500,{"error":"internal server error"})

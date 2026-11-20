@@ -3,6 +3,7 @@
 ## 2026-11-19 — Infrastructure checkpoint
 
 - `python3 -m unittest discover -s tests -v`: PASS (2 tests).
+- Current full suite `python3 -m unittest discover -s tests -v`: PASS (8 tests), including localhost HTTP integration.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
