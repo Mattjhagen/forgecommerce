@@ -41,3 +41,9 @@ Next: add collections, editor rollback controls, and backup/restore verification
 Added tenant-scoped product collections with public collection browsing and verified the SQLite backup/restore utility against tenant and catalog data. Full suite: 15 tests passing.
 
 Next: add editor rollback controls, rate limiting, stricter input/security tests, and platform administration surfaces.
+
+## 2026-11-19 — Security hardening checkpoint
+
+Added process-local HTTP rate limiting and escaped merchant-controlled product names in the storefront renderer. The full suite passes 16 tests, including limiter behavior.
+
+Next: add editor rollback controls, security regression tests for malicious content, and platform administration surfaces.

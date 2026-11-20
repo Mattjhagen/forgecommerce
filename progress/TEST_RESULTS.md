@@ -9,6 +9,7 @@
 - Current full suite: PASS (12 tests), including customer persistence, order search, and fulfillment status transitions.
 - Current full suite: PASS (13 tests), including tenant-scoped product variants and SKU uniqueness.
 - Current full suite: PASS (15 tests), including tenant-scoped collections and backup/restore verification.
+- Current full suite: PASS (16 tests), including bounded rate-limiter behavior.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
