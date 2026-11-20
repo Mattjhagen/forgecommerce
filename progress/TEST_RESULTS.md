@@ -43,3 +43,12 @@
 - Non-HTTP regression suite: 19 passed.
 - HTTP/load regression suite: 10 passed.
 - Coverage includes public blog listing/detail/feed routes, HTML escaping, CSP headers, viewport/main landmarks, editor labels, and the concurrent health smoke test.
+
+## Failure recovery hardening
+
+- Backup creation is atomic: a corrupt source raises an error without replacing the prior destination backup.
+
+## 2026-11-20 — Atomic backup recovery
+
+- Non-HTTP regression suite: 20 passed.
+- HTTP/load regression suite: 10 passed.
