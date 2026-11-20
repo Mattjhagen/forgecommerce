@@ -1,4 +1,4 @@
-import hashlib, hmac, json, re
+import hashlib, hmac, html, json, re
 from datetime import datetime, timedelta, timezone
 from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
 
@@ -268,6 +268,16 @@ class Commerce:
     def public_products(self, slug):
         tenant = self.tenant(slug)
         return [dict(row) for row in self.db.execute("SELECT id,name,slug,price_cents,inventory FROM products WHERE tenant_id=? AND status='active' ORDER BY created_at", (tenant["id"],))]
+    def public_search(self, slug, query):
+        tenant=self.tenant(slug); query=str(query or "").strip()
+        if len(query)<2: return []
+        needle=f"%{query}%"
+        return [dict(row) for row in self.db.execute("SELECT id,name,slug,price_cents,inventory FROM products WHERE tenant_id=? AND status='active' AND (name LIKE ? OR slug LIKE ?) ORDER BY name LIMIT 50",(tenant["id"],needle,needle))]
+    def sitemap(self, slug):
+        tenant=self.tenant(slug); urls=[f"/store/{slug}"]
+        urls += [f"/store/{slug}/products/{row['slug']}" for row in self.db.execute("SELECT slug FROM products WHERE tenant_id=? AND status='active'",(tenant["id"],))]
+        urls += [f"/store/{slug}/page/{row['slug']}" for row in self.db.execute("SELECT slug FROM pages WHERE tenant_id=? AND status='published'",(tenant["id"],))]
+        return "<?xml version='1.0' encoding='UTF-8'?><urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>"+"".join(f"<url><loc>{html.escape(url)}</loc></url>" for url in urls)+"</urlset>"
     def public_page(self, slug, page_slug):
         tenant = self.tenant(slug)
         page = self.db.execute("SELECT * FROM pages WHERE tenant_id=? AND slug=? AND status='published'", (tenant["id"], page_slug)).fetchone()

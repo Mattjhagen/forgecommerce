@@ -71,3 +71,9 @@ Next: add malicious-content regression coverage, platform-wide administration, w
 Added hashed API-key authentication with revocation, webhook registration, signed order-created delivery records, and delivery inspection. Full suite: 18 tests passing.
 
 Next: add malicious-content regression coverage, public search/SEO metadata, and platform-wide administration controls.
+
+## 2026-11-20 — Search and SEO checkpoint
+
+Added public tenant-scoped product search and standards-compatible sitemap XML generation. Full suite: 19 tests passing.
+
+Next: add page SEO rendering, malicious-content regression coverage, and platform-wide administration controls.

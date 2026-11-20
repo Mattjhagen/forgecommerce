@@ -43,5 +43,11 @@ class ApiTests(unittest.TestCase):
         self.call('POST','/store/guest-shop/carts/items',{'cart_id':cart['id'],'product_id':product['id'],'quantity':1})
         _, order=self.call('POST','/store/guest-shop/carts/checkout',{'cart_id':cart['id'],'customer_email':'guest@example.com'},headers={'Idempotency-Key':'guest-1'})
         self.assertEqual(order['payment_status'],'paid_sandbox')
+    def test_public_search_and_sitemap(self):
+        _, auth=self.call('POST','/api/auth/register',{'email':'seo@example.com','password':'long enough password','store_name':'SEO Shop'})
+        _, product=self.call('POST','/api/products',{'name':'Blue Shoes','price_cents':3000,'inventory':4},auth['token'])
+        result=self.call('GET','/store/seo-shop/search?q=shoes')[1]; self.assertEqual(result['products'][0]['id'],product['id'])
+        req=Request(self.base+'/store/seo-shop/sitemap.xml',method='GET')
+        with urlopen(req) as response: xml=response.read().decode(); self.assertIn("sitemaps.org",xml); self.assertIn('blue-shoes',xml)
 
 if __name__=='__main__': unittest.main()

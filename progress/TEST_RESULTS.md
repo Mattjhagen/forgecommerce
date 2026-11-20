@@ -14,6 +14,7 @@
 - Current full suite: PASS (17 tests), including tenant analytics and owner-only admin health authorization.
 - Current full suite: PASS (17 tests), including owner-only usage reporting and tenant quota plumbing.
 - Current full suite: PASS (18 tests), including API-key revocation and HMAC-signed webhook delivery.
+- Current full suite: PASS (19 tests), including public search and sitemap generation.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
