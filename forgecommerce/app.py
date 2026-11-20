@@ -39,6 +39,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self.server.limiter.allow(self.client_address[0]): return self.send_json(429,{"error":"rate limit exceeded"})
             path=urlparse(self.path).path
             if path=="/health": return self.send_json(200,{"status":"ok","service":"forgecommerce"})
+            if path=="/api/platform/tenants": return self.send_json(200,{"tenants":self.server.commerce.platform_tenants(self.headers.get("X-Platform-Admin",""))})
             parts=path.strip("/").split("/")
             if len(parts)==2 and parts[0]=="store": return self.send_html(200,self.storefront_html(parts[1]))
             if path=="/editor": return self.send_html(200,self.editor_html())
@@ -79,6 +80,9 @@ class Handler(BaseHTTPRequestHandler):
             path=urlparse(self.path).path; data=self.body(); c=self.server.commerce
             if path=="/api/auth/register": return self.send_json(201,c.register(data.get("email",""),data.get("password",""),data.get("store_name","")))
             if path=="/api/auth/login": return self.send_json(200,c.login(data.get("email",""),data.get("password","")))
+            if path=="/api/platform/tenants": return self.send_json(201,c.platform_provision(self.headers.get("X-Platform-Admin",""),data))
+            if path.startswith("/api/platform/tenants/") and path.endswith("/status"):
+                return self.send_json(200,c.platform_set_status(self.headers.get("X-Platform-Admin",""),path.split("/")[3],data.get("status")))
             parts=path.strip("/").split("/")
             if len(parts)==3 and parts[0]=="store" and parts[2]=="carts": return self.send_json(201,c.public_cart_create(parts[1]))
             if len(parts)==4 and parts[0]=="store" and parts[2]=="carts" and parts[3]=="checkout": return self.send_json(201,c.public_checkout(parts[1],data.get("cart_id"),data.get("customer_email",""),self.headers.get("Idempotency-Key","")))
@@ -122,7 +126,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
 
 def make_server(settings=None):
-    settings=settings or Settings(); server=ThreadingHTTPServer((settings.host,settings.port),Handler); server.settings=settings; server.commerce=Commerce(connect(settings.db_path),settings.session_hours); server.limiter=RateLimiter(); return server
+    settings=settings or Settings(); server=ThreadingHTTPServer((settings.host,settings.port),Handler); server.settings=settings; server.commerce=Commerce(connect(settings.db_path),settings.session_hours,platform_admin_token=settings.platform_admin_token); server.limiter=RateLimiter(); return server
 
 if __name__ == "__main__":
     server=make_server(); print(f"ForgeCommerce listening on http://{server.settings.host}:{server.settings.port}",flush=True); server.serve_forever()

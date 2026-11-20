@@ -1,4 +1,4 @@
-import csv, hashlib, hmac, html, io, json, re
+import csv, hashlib, hmac, html, io, json, os, re
 from datetime import datetime, timedelta, timezone
 from .security import api_key_hash, hash_password, verify_password, token_hash, new_id
 from .payments import PaymentError, SandboxPaymentProvider
@@ -10,7 +10,7 @@ class DomainError(Exception):
     def __init__(self, message, status=400): self.message, self.status = message, status
 
 class Commerce:
-    def __init__(self, conn, session_hours=24, payment_provider=None): self.db, self.session_hours, self.payment_provider = conn, session_hours, payment_provider or SandboxPaymentProvider()
+    def __init__(self, conn, session_hours=24, payment_provider=None, platform_admin_token=None): self.db, self.session_hours, self.payment_provider, self.platform_admin_token = conn, session_hours, payment_provider or SandboxPaymentProvider(), platform_admin_token if platform_admin_token is not None else os.getenv("FORGECOMMERCE_PLATFORM_ADMIN_TOKEN", "")
     def audit(self, tenant, user, action, resource_type=None, resource_id=None, metadata=None):
         self.db.execute("INSERT INTO audit_events VALUES (?,?,?,?,?,?,?,?)", (new_id(), tenant, user, action, resource_type, resource_id, json.dumps(metadata or {}, sort_keys=True), now()))
     def register(self, email, password, store_name):
@@ -22,6 +22,7 @@ class Commerce:
         try:
             self.db.execute("BEGIN")
             self.db.execute("INSERT INTO tenants VALUES (?,?,?,?)", (tenant_id, store_name.strip()[:100], slugify(store_name), now()))
+            self.db.execute("INSERT INTO tenant_controls VALUES (?,?,?)", (tenant_id,"active",now()))
             self.db.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (user_id, tenant_id, email, password_hash, "owner", now()))
             self.db.execute("INSERT INTO tenant_limits (tenant_id) VALUES (?)", (tenant_id,))
             timestamp=now(); self.db.execute("INSERT INTO subscriptions VALUES (?,?,?,?,?,?,?,?)",(new_id(),tenant_id,"starter","active","sandbox","sub_"+new_id(),timestamp,timestamp))
@@ -40,11 +41,11 @@ class Commerce:
         return {"token": raw, "user": {"id": row["id"], "email": row["email"], "role": row["role"], "tenant_id": row["tenant_id"]}}
     def authenticate(self, token):
         if not token: raise DomainError("authentication required", 401)
-        row = self.db.execute("SELECT * FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token_hash=? AND s.expires_at>?", (token_hash(token), now())).fetchone()
+        row = self.db.execute("SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id JOIN tenant_controls tc ON tc.tenant_id=u.tenant_id WHERE s.token_hash=? AND s.expires_at>? AND tc.status='active'", (token_hash(token), now())).fetchone()
         if not row: raise DomainError("invalid or expired session", 401)
         return row
     def authenticate_api_key(self, key):
-        row=self.db.execute("SELECT u.*,k.id AS api_key_id FROM users u JOIN api_keys k ON k.user_id=u.id WHERE k.key_hash=? AND k.revoked_at IS NULL",(api_key_hash(key),)).fetchone()
+        row=self.db.execute("SELECT u.*,k.id AS api_key_id FROM users u JOIN api_keys k ON k.user_id=u.id JOIN tenant_controls tc ON tc.tenant_id=u.tenant_id WHERE k.key_hash=? AND k.revoked_at IS NULL AND tc.status='active'",(api_key_hash(key),)).fetchone()
         if not row: raise DomainError("invalid or revoked API key",401)
         return row
     def api_keys(self, auth):
@@ -292,9 +293,24 @@ class Commerce:
     def audit_events(self, auth):
         return [dict(row) for row in self.db.execute("SELECT action,resource_type,resource_id,metadata_json,created_at FROM audit_events WHERE tenant_id=? ORDER BY created_at DESC LIMIT 200", (auth["tenant_id"],))]
     def tenant(self, slug):
-        row = self.db.execute("SELECT id,name,slug FROM tenants WHERE slug=?", (slug,)).fetchone()
+        row = self.db.execute("SELECT t.id,t.name,t.slug FROM tenants t JOIN tenant_controls tc ON tc.tenant_id=t.id WHERE t.slug=? AND tc.status='active'", (slug,)).fetchone()
         if not row: raise DomainError("store not found", 404)
         return row
+    def platform_auth(self, token):
+        if not self.platform_admin_token or not token or not hmac.compare_digest(token,self.platform_admin_token): raise DomainError("platform admin authentication required",401)
+    def platform_tenants(self, token):
+        self.platform_auth(token)
+        return [dict(row) for row in self.db.execute("SELECT t.id,t.name,t.slug,tc.status,t.created_at,(SELECT COUNT(*) FROM products p WHERE p.tenant_id=t.id) AS products,(SELECT COUNT(*) FROM orders o WHERE o.tenant_id=t.id) AS orders FROM tenants t JOIN tenant_controls tc ON tc.tenant_id=t.id ORDER BY t.created_at")]
+    def platform_provision(self, token, data):
+        self.platform_auth(token); result=self.register(data.get("email",""),data.get("password",""),data.get("store_name","")); user=result["user"]
+        return {"tenant_id":user["tenant_id"],"email":user["email"],"status":"active"}
+    def platform_set_status(self, token, slug, status):
+        self.platform_auth(token)
+        if status not in {"active","suspended"}: raise DomainError("status must be active or suspended")
+        row=self.db.execute("SELECT id FROM tenants WHERE slug=?",(slug,)).fetchone()
+        if not row: raise DomainError("tenant not found",404)
+        self.db.execute("UPDATE tenant_controls SET status=?,updated_at=? WHERE tenant_id=?",(status,now(),row["id"]))
+        return {"slug":slug,"status":status}
     def public_products(self, slug):
         tenant = self.tenant(slug)
         return [dict(row) for row in self.db.execute("SELECT id,name,slug,price_cents,inventory FROM products WHERE tenant_id=? AND status='active' ORDER BY created_at", (tenant["id"],))]

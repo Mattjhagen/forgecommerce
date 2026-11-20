@@ -8,3 +8,4 @@ class Settings:
     port: int = int(os.getenv("FORGECOMMERCE_PORT", "8080"))
     session_hours: int = int(os.getenv("FORGECOMMERCE_SESSION_HOURS", "24"))
     max_body_bytes: int = int(os.getenv("FORGECOMMERCE_MAX_BODY", "1048576"))
+    platform_admin_token: str = os.getenv("FORGECOMMERCE_PLATFORM_ADMIN_TOKEN", "")

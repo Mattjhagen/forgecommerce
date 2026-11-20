@@ -78,5 +78,14 @@ class CommerceTests(unittest.TestCase):
         self.assertEqual(self.c.subscription_change(self.aa,'growth')['status'],'active'); self.assertEqual(self.c.usage(self.aa)['limits']['product_limit'],1000)
         staff=self.c.staff_create(self.aa,{'email':'billing-staff@example.com','password':'staff password','role':'manager'}); staff_auth=self.c.authenticate(self.c.login('billing-staff@example.com','staff password')['token'])
         with self.assertRaises(DomainError): self.c.subscription_change(staff_auth,'scale')
+    def test_platform_admin_provisions_lists_and_suspends_tenants(self):
+        import tempfile
+        db=tempfile.NamedTemporaryFile(suffix='.sqlite3'); platform=Commerce(connect(db.name),platform_admin_token='platform-secret')
+        provisioned=platform.platform_provision('platform-secret',{'email':'platform@example.com','password':'long enough password','store_name':'Platform Shop'})
+        self.assertEqual(platform.platform_tenants('platform-secret')[0]['status'],'active')
+        with self.assertRaises(DomainError): platform.platform_tenants('wrong')
+        tenant=platform.tenant('platform-shop'); user=platform.login('platform@example.com','long enough password'); self.assertEqual(platform.platform_set_status('platform-secret','platform-shop','suspended')['status'],'suspended')
+        with self.assertRaises(DomainError): platform.authenticate(user['token'])
+        db.close()
 
 if __name__=='__main__': unittest.main()

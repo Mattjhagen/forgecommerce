@@ -102,6 +102,12 @@ Added provider-neutral sandbox subscriptions with starter/growth/scale plan tran
 
 Next: add platform-wide administration controls, payment adapter contract tests, and deeper accessibility/load verification.
 
+## 2026-11-20 — Platform administration checkpoint
+
+Added a separately authenticated platform-admin boundary for tenant provisioning, tenant listing/usage counts, suspension, and suspended-session/API-key enforcement. Full suite: 25 tests passing.
+
+Next: add migration controls and deeper accessibility/load verification.
+
 ## 2026-11-20 — Payment adapter checkpoint
 
 Added a provider-neutral sandbox payment adapter with idempotent charge/refund behavior and integrated it into checkout. Full suite: 24 tests passing.

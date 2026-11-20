@@ -21,6 +21,7 @@
 - Current full suite: PASS (22 tests), including tenant-scoped CSV product import/export.
 - Current full suite: PASS (23 tests), including sandbox subscription transitions and quota updates.
 - Current full suite: PASS (24 tests), including payment-provider idempotency/refund contract behavior.
+- Current full suite: PASS (25 tests), including platform-admin provisioning/listing/suspension authorization.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
