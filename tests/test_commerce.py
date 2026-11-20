@@ -88,5 +88,9 @@ class CommerceTests(unittest.TestCase):
         with self.assertRaises(DomainError): platform.authenticate(user['token'])
         self.assertEqual(platform.platform_migrations('platform-secret')['pending'],0); self.assertEqual(platform.platform_migrations('platform-secret',True)['current'],1)
         db.close()
+    def test_custom_domain_registration_and_verification_are_tenant_scoped(self):
+        domain=self.c.domain_add(self.aa,'shop.example.com'); self.assertEqual(domain['status'],'pending'); self.assertEqual(self.c.domain_verify(self.aa,domain['id'],domain['verification_token'])['status'],'verified')
+        with self.assertRaises(DomainError): self.c.domain_verify(self.bb,domain['id'],domain['verification_token'])
+        with self.assertRaises(DomainError): self.c.domain_add(self.aa,'not a hostname')
 
 if __name__=='__main__': unittest.main()

@@ -114,6 +114,12 @@ Added explicit schema version metadata and platform-admin migration status/apply
 
 Next: deepen accessibility checks, failure recovery, and production adapter documentation.
 
+## 2026-11-20 — Custom-domain checkpoint
+
+Added tenant-scoped custom-domain registration and verification-token workflow. The non-HTTP suite passes 18 tests and the HTTP/load suite passes 9 tests after the change.
+
+Next: deepen accessibility checks, failure recovery, and production adapter documentation.
+
 ## 2026-11-20 — Payment adapter checkpoint
 
 Added a provider-neutral sandbox payment adapter with idempotent charge/refund behavior and integrated it into checkout. Full suite: 24 tests passing.

@@ -69,6 +69,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/admin/health": return self.send_json(200,self.server.commerce.admin_health(auth))
             if path=="/api/admin/usage": return self.send_json(200,self.server.commerce.usage(auth))
             if path=="/api/billing/subscription": return self.send_json(200,self.server.commerce.subscription(auth))
+            if path=="/api/domains": return self.send_json(200,{"domains":self.server.commerce.domains(auth)})
             if path=="/api/api-keys": return self.send_json(200,{"keys":self.server.commerce.api_keys(auth)})
             if path=="/api/webhooks": return self.send_json(200,{"webhooks":self.server.commerce.webhooks(auth)})
             if path.startswith("/api/webhooks/") and path.endswith("/deliveries"): return self.send_json(200,{"deliveries":self.server.commerce.webhook_deliveries(auth,path.split("/")[3])})
@@ -118,6 +119,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200,c.order_status(auth,path.split("/")[3],data.get("status")))
             if path=="/api/feature-flags": return self.send_json(200,c.flag_set(auth,data.get("name"),data.get("enabled")))
             if path=="/api/billing/subscription": return self.send_json(200,c.subscription_change(auth,data.get("plan"),data.get("action","activate")))
+            if path=="/api/domains": return self.send_json(201,c.domain_add(auth,data.get("hostname")))
+            if path.startswith("/api/domains/") and path.endswith("/verify"):
+                return self.send_json(200,c.domain_verify(auth,path.split("/")[3],data.get("verification_token")))
             if path=="/api/api-keys": return self.send_json(201,c.api_key_create(auth,data.get("name")))
             if path.startswith("/api/api-keys/") and path.endswith("/revoke"): return self.send_json(200,c.api_key_revoke(auth,path.split("/")[3]))
             if path=="/api/webhooks": return self.send_json(201,c.webhook_create(auth,data))

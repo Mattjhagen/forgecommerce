@@ -235,6 +235,24 @@ class Commerce:
         self.db.execute("UPDATE tenant_limits SET plan=?,product_limit=?,page_limit=?,staff_limit=? WHERE tenant_id=?",(plan,*limits,auth["tenant_id"]))
         self.audit(auth["tenant_id"],auth["id"],"subscription.updated","subscription",None,{"plan":plan,"status":status})
         return self.subscription(auth)
+    def domains(self, auth):
+        return [dict(row) for row in self.db.execute("SELECT id,hostname,status,created_at,verified_at FROM domains WHERE tenant_id=? ORDER BY created_at DESC",(auth["tenant_id"],))]
+    def domain_add(self, auth, hostname):
+        if auth["role"] not in {"owner","admin"}: raise DomainError("admin access required",403)
+        hostname=str(hostname or "").strip().lower().rstrip(".")
+        if not re.match(r"^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$",hostname): raise DomainError("valid hostname required")
+        token="verify_"+new_id()+new_id(); did=new_id()
+        try: self.db.execute("INSERT INTO domains VALUES (?,?,?,?,?,?,?)",(did,auth["tenant_id"],hostname,api_key_hash(token),"pending",now(),None))
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper(): raise DomainError("hostname already registered",409)
+            raise
+        self.audit(auth["tenant_id"],auth["id"],"domain.added","domain",did,{"hostname":hostname})
+        return {"id":did,"hostname":hostname,"status":"pending","verification_token":token}
+    def domain_verify(self, auth, did, token):
+        row=self.db.execute("SELECT * FROM domains WHERE id=? AND tenant_id=?",(did,auth["tenant_id"])).fetchone()
+        if not row: raise DomainError("domain not found",404)
+        if not token or not hmac.compare_digest(row["verification_hash"],api_key_hash(token)): raise DomainError("verification failed",400)
+        verified=now(); self.db.execute("UPDATE domains SET status='verified',verified_at=? WHERE id=?",(verified,did)); self.audit(auth["tenant_id"],auth["id"],"domain.verified","domain",did); return {"id":did,"hostname":row["hostname"],"status":"verified","verified_at":verified}
     def refund(self, auth, oid):
         row = self.db.execute("SELECT * FROM orders WHERE id=? AND tenant_id=?", (oid, auth["tenant_id"])).fetchone()
         if not row: raise DomainError("order not found", 404)

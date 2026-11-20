@@ -23,6 +23,7 @@
 - Current full suite: PASS (24 tests), including payment-provider idempotency/refund contract behavior.
 - Current full suite: PASS (25 tests), including platform-admin provisioning/listing/suspension authorization.
 - Current full suite: PASS (26 tests), including migration controls and 32-request concurrent health load verification.
+- Domain checkpoint verification: PASS — non-HTTP suite 18 tests; HTTP/load suite 9 tests.
 - `python3 -m compileall -q forgecommerce scripts`: PASS.
 - `bash -n scripts/*.sh`: PASS.
 - `systemd-analyze verify systemd/*.service systemd/*.timer`: PASS.
